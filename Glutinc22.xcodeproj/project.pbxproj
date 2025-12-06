@@ -24,9 +24,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A8954D882EDD7E7F00A2DDD4 /* Glutinc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glutinc.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A8954D952EDD7E8100A2DDD4 /* GlutincTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GlutincTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A8954D9F2EDD7E8100A2DDD4 /* GlutincUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GlutincUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A8954D882EDD7E7F00A2DDD4 /* Glutinc22.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glutinc22.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A8954D952EDD7E8100A2DDD4 /* Glutinc22Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Glutinc22Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A8954D9F2EDD7E8100A2DDD4 /* Glutinc22UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Glutinc22UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -85,9 +85,9 @@
 		A8954D892EDD7E7F00A2DDD4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A8954D882EDD7E7F00A2DDD4 /* Glutinc.app */,
-				A8954D952EDD7E8100A2DDD4 /* GlutincTests.xctest */,
-				A8954D9F2EDD7E8100A2DDD4 /* GlutincUITests.xctest */,
+				A8954D882EDD7E7F00A2DDD4 /* Glutinc22.app */,
+				A8954D952EDD7E8100A2DDD4 /* Glutinc22Tests.xctest */,
+				A8954D9F2EDD7E8100A2DDD4 /* Glutinc22UITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A8954D872EDD7E7F00A2DDD4 /* Glutinc */ = {
+		A8954D872EDD7E7F00A2DDD4 /* Glutinc22 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A8954DA92EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc" */;
+			buildConfigurationList = A8954DA92EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc22" */;
 			buildPhases = (
 				A8954D842EDD7E7F00A2DDD4 /* Sources */,
 				A8954D852EDD7E7F00A2DDD4 /* Frameworks */,
@@ -110,16 +110,16 @@
 			fileSystemSynchronizedGroups = (
 				A8954D8A2EDD7E7F00A2DDD4 /* Glutinc */,
 			);
-			name = Glutinc;
+			name = Glutinc22;
 			packageProductDependencies = (
 			);
 			productName = Glutinc;
-			productReference = A8954D882EDD7E7F00A2DDD4 /* Glutinc.app */;
+			productReference = A8954D882EDD7E7F00A2DDD4 /* Glutinc22.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A8954D942EDD7E8100A2DDD4 /* GlutincTests */ = {
+		A8954D942EDD7E8100A2DDD4 /* Glutinc22Tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A8954DAC2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "GlutincTests" */;
+			buildConfigurationList = A8954DAC2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc22Tests" */;
 			buildPhases = (
 				A8954D912EDD7E8100A2DDD4 /* Sources */,
 				A8954D922EDD7E8100A2DDD4 /* Frameworks */,
@@ -133,16 +133,16 @@
 			fileSystemSynchronizedGroups = (
 				A8954D982EDD7E8100A2DDD4 /* GlutincTests */,
 			);
-			name = GlutincTests;
+			name = Glutinc22Tests;
 			packageProductDependencies = (
 			);
 			productName = GlutincTests;
-			productReference = A8954D952EDD7E8100A2DDD4 /* GlutincTests.xctest */;
+			productReference = A8954D952EDD7E8100A2DDD4 /* Glutinc22Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		A8954D9E2EDD7E8100A2DDD4 /* GlutincUITests */ = {
+		A8954D9E2EDD7E8100A2DDD4 /* Glutinc22UITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A8954DAF2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "GlutincUITests" */;
+			buildConfigurationList = A8954DAF2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc22UITests" */;
 			buildPhases = (
 				A8954D9B2EDD7E8100A2DDD4 /* Sources */,
 				A8954D9C2EDD7E8100A2DDD4 /* Frameworks */,
@@ -156,11 +156,11 @@
 			fileSystemSynchronizedGroups = (
 				A8954DA22EDD7E8100A2DDD4 /* GlutincUITests */,
 			);
-			name = GlutincUITests;
+			name = Glutinc22UITests;
 			packageProductDependencies = (
 			);
 			productName = GlutincUITests;
-			productReference = A8954D9F2EDD7E8100A2DDD4 /* GlutincUITests.xctest */;
+			productReference = A8954D9F2EDD7E8100A2DDD4 /* Glutinc22UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A8954D832EDD7E7F00A2DDD4 /* Build configuration list for PBXProject "Glutinc" */;
+			buildConfigurationList = A8954D832EDD7E7F00A2DDD4 /* Build configuration list for PBXProject "Glutinc22" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A8954D872EDD7E7F00A2DDD4 /* Glutinc */,
-				A8954D942EDD7E8100A2DDD4 /* GlutincTests */,
-				A8954D9E2EDD7E8100A2DDD4 /* GlutincUITests */,
+				A8954D872EDD7E7F00A2DDD4 /* Glutinc22 */,
+				A8954D942EDD7E8100A2DDD4 /* Glutinc22Tests */,
+				A8954D9E2EDD7E8100A2DDD4 /* Glutinc22UITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		A8954D972EDD7E8100A2DDD4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A8954D872EDD7E7F00A2DDD4 /* Glutinc */;
+			target = A8954D872EDD7E7F00A2DDD4 /* Glutinc22 */;
 			targetProxy = A8954D962EDD7E8100A2DDD4 /* PBXContainerItemProxy */;
 		};
 		A8954DA12EDD7E8100A2DDD4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A8954D872EDD7E7F00A2DDD4 /* Glutinc */;
+			target = A8954D872EDD7E7F00A2DDD4 /* Glutinc22 */;
 			targetProxy = A8954DA02EDD7E8100A2DDD4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -474,7 +474,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Glutinc.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Glutinc";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Glutinc22.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Glutinc22";
 			};
 			name = Debug;
 		};
@@ -496,7 +496,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Glutinc.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Glutinc";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Glutinc22.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Glutinc22";
 			};
 			name = Release;
 		};
@@ -543,7 +543,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A8954D832EDD7E7F00A2DDD4 /* Build configuration list for PBXProject "Glutinc" */ = {
+		A8954D832EDD7E7F00A2DDD4 /* Build configuration list for PBXProject "Glutinc22" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A8954DA72EDD7E8100A2DDD4 /* Debug */,
@@ -552,7 +552,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A8954DA92EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc" */ = {
+		A8954DA92EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc22" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A8954DAA2EDD7E8100A2DDD4 /* Debug */,
@@ -561,7 +561,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A8954DAC2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "GlutincTests" */ = {
+		A8954DAC2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc22Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A8954DAD2EDD7E8100A2DDD4 /* Debug */,
@@ -570,7 +570,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A8954DAF2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "GlutincUITests" */ = {
+		A8954DAF2EDD7E8100A2DDD4 /* Build configuration list for PBXNativeTarget "Glutinc22UITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A8954DB02EDD7E8100A2DDD4 /* Debug */,
