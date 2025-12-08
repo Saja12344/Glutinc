@@ -45,7 +45,7 @@ struct HomeView: View {
                 RadialGradient(
                     gradient: Gradient(colors: [
                         Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
-                        Color("GradientStart"),  // الأبيض FCFCFC – بالنص
+                      
                         Color("GradientMiddle")  // الأخضر CEEDE7 – يغطي تحت
                     ]),
                     center: .topTrailing,
@@ -132,7 +132,7 @@ struct GlassTabBar: View {
 }
 
 /////////////////////////////////////////////////
-// MARK: - System Search Bar (نفس الملف)
+// MARK: - System Search Bar
 /////////////////////////////////////////////////
 
 struct SystemSearchBar: UIViewRepresentable {
@@ -169,5 +169,5 @@ struct SystemSearchBar: UIViewRepresentable {
 
 #Preview {
     HomeView()
-        .preferredColorScheme(.dark)
+       
 }
