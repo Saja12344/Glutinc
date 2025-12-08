@@ -27,4 +27,8 @@ final class UserVM: ObservableObject {
     func updatePhoto(_ image: UIImage?) {
         user.photo = image
     }
+    func logout() {
+          user = UserModel()   // تصفير كامل البيانات
+          print("✅ تم تسجيل الخروج")
+      }
 }

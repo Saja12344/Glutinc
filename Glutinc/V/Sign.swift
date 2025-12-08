@@ -33,17 +33,7 @@ struct Signup: View {
                 .frame(height: 50)
                 .cornerRadius(10)
                 
-                // ⁠عرض بيانات المستخدم بعد نجاح تسجيل الدخول
-            //   if let user = viewModel.user {
-                 //   VStack(spacing: 5) {
-                    //    Text("Apple ID: \(user.id)")
-                    //   Text("Name: \(user.name)")
-                    //   Text("Email: \(user.email)")
-            //       }
-               //    .font(.system(size: 15))
-                //   .foregroundColor(.gray)
-         //       }
-                
+        
                 // ⁠عرض الخطأ لو فيه مشكلة
                 if !viewModel.errorMessage.isEmpty {
                     Text("Error: \(viewModel.errorMessage)")

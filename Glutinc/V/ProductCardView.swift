@@ -1,3 +1,11 @@
+//
+//  ProductCardView.swift
+//  Glutinc22
+//
+//  Created by saja khalid on 17/06/1447 AH.
+//
+
+
 import SwiftUI
 
 struct ProductCardView: View {
@@ -10,42 +18,27 @@ struct ProductCardView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            // الصورة + البوك مارك (٨٠٪ تقريبًا من الكارد)
-            ZStack(alignment: .topTrailing) {
-                image
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 180) // تقريبًا ٨٠٪ لو الكارد 230–240
-                    .clipped()
-                    .overlay(
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.black.opacity(0.15), .clear],
-                                    startPoint: .top,
-                                    endPoint: .center
-                                )
-                            )
-                    )
-                
-                Button(action: onBookmarkTap) {
-                    Image(systemName: "bookmark")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                        .shadow(radius: 4)
-                        .padding(8)
-                }
-            }
             
-            // البيانات تحت الصورة
+            // ✅ الديتيلز فوق
             VStack(alignment: .leading, spacing: 6) {
-                // اسم المنتج
-                Text(productName)
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    
+                    // اسم المنتج
+                    Text(productName)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Spacer()
+                    
+                    // ✅ زر البوك مارك (فوق يمين)
+                    Button(action: onBookmarkTap) {
+                        Image(systemName: "bookmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }}
+                .padding(6)
                 
                 // الحساب + التقييم
                 HStack(spacing: 8) {
@@ -53,8 +46,8 @@ struct ProductCardView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                    
                     Spacer()
+
                     
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
@@ -65,32 +58,58 @@ struct ProductCardView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
-                // حالة الغلوتين
-                HStack {
-                    Text(isGlutenFree ? "Gluten-Free" : "Contains Gluten")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(isGlutenFree ? Color.green.opacity(0.12)
-                                                   : Color.red.opacity(0.12))
-                        )
-                        .foregroundColor(isGlutenFree ? .green : .red)
-                    
-                    Spacer()
-                }
             }
             .padding(.horizontal, 10)
-            .padding(.bottom, 10)
+            .padding(.top, 10)
+            
+            // ✅ الصورة صغيرة تحت (≈ 60)
+            ZStack(alignment: .topTrailing) {
+                
+                // ✅ خلفية رمادي (مؤقتًا بدل الصورة)
+                Rectangle()
+                    .fill(Color.gray.opacity(0.25))
+                    .frame(height: 120)
+                    .overlay(
+                        LinearGradient(
+                            colors: [.black.opacity(0.1), .clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+                
+             
+                
+                // ✅ وسم الغلوتن (تحت يمين فوق الصورة)
+                VStack {
+                    Spacer()
+                    
+                    HStack {
+                        Spacer()
+                        
+                        Text(isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(isGlutenFree
+                                          ? Color.green.opacity(0.9)
+                                          : Color.red.opacity(0.9))
+                            )
+                            .foregroundColor(.white)
+                            .padding(6)
+                    }
+                }
+            }
+            
+            Spacer(minLength: 4)
         }
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+            RoundedRectangle(cornerRadius: 18)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }

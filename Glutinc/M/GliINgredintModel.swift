@@ -11,5 +11,6 @@ import Foundation
 struct GlutenIngredient: Identifiable,Equatable {
     let id = UUID()   // Unique identifier for SwiftUI
     let name: String  // The keyword/ingredient name (e.g., "wheat")
+ 
 }
 

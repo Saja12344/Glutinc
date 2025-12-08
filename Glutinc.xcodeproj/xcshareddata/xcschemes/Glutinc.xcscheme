@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A8954D872EDD7E7F00A2DDD4"
-               BuildableName = "Glutinc22.app"
-               BlueprintName = "Glutinc22"
-               ReferencedContainer = "container:Glutinc22.xcodeproj">
+               BuildableName = "Glutinc.app"
+               BlueprintName = "Glutinc"
+               ReferencedContainer = "container:Glutinc.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A8954D942EDD7E8100A2DDD4"
-               BuildableName = "Glutinc22Tests.xctest"
-               BlueprintName = "Glutinc22Tests"
-               ReferencedContainer = "container:Glutinc22.xcodeproj">
+               BuildableName = "GlutincTests.xctest"
+               BlueprintName = "GlutincTests"
+               ReferencedContainer = "container:Glutinc.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A8954D9E2EDD7E8100A2DDD4"
-               BuildableName = "Glutinc22UITests.xctest"
-               BlueprintName = "Glutinc22UITests"
-               ReferencedContainer = "container:Glutinc22.xcodeproj">
+               BuildableName = "GlutincUITests.xctest"
+               BlueprintName = "GlutincUITests"
+               ReferencedContainer = "container:Glutinc.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,9 +69,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A8954D872EDD7E7F00A2DDD4"
-            BuildableName = "Glutinc22.app"
-            BlueprintName = "Glutinc22"
-            ReferencedContainer = "container:Glutinc22.xcodeproj">
+            BuildableName = "Glutinc.app"
+            BlueprintName = "Glutinc"
+            ReferencedContainer = "container:Glutinc.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -86,9 +86,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A8954D872EDD7E7F00A2DDD4"
-            BuildableName = "Glutinc22.app"
-            BlueprintName = "Glutinc22"
-            ReferencedContainer = "container:Glutinc22.xcodeproj">
+            BuildableName = "Glutinc.app"
+            BlueprintName = "Glutinc"
+            ReferencedContainer = "container:Glutinc.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

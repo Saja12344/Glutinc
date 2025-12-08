@@ -14,7 +14,7 @@ struct User {
    
 }
 
-struct Product{
+struct Productm{
     let rating: Int
     var productPrice: Int
     var selectedCategory: String?
