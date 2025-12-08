@@ -154,5 +154,5 @@ struct GlassTabBar: View {
 
 #Preview {
     HomeView()
-        .preferredColorScheme(.dark)
+        //.preferredColorScheme(.dark)
 }
