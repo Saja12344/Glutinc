@@ -30,7 +30,6 @@ struct HomeView: View {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return feedVM.posts }
         return feedVM.posts.filter { post in
-            // عدل الحقول حسب Model لو احتجت
             post.content.localizedCaseInsensitiveContains(q) ||
             post.title.localizedCaseInsensitiveContains(q)
         }
@@ -40,16 +39,16 @@ struct HomeView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
 
-                // - الخلفية (لايت + دارك)
+                
                 if colorScheme == .dark {
-                    // دارك مود: خلفية غامقة + Radial خفيف فوقها
+                    // دارك مود: خلفية غامقة + Radial خفيـف
                     Color("BackgroundMain")
                         .ignoresSafeArea()
 
                     RadialGradient(
                         gradient: Gradient(colors: [
-                            Color("GradientEnd"),    // الأزرق
-                            Color("GradientStart"),  // الأبيض الخفيف
+                            Color("GradientEnd"),                        // الأزرق
+                            Color("GradientStart").opacity(0.10),       // الأبيض مرررة خفيف
                             .clear
                         ]),
                         center: .topTrailing,
@@ -59,11 +58,10 @@ struct HomeView: View {
                     .opacity(0.9)
                     .ignoresSafeArea()
                 } else {
-                    // لايت مود: نفس الـ Radial
+                    
                     RadialGradient(
                         gradient: Gradient(colors: [
                             Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
-                            Color("GradientStart"),  // الأبيض FCFCFC – بالنص
                             Color("GradientMiddle")  // الأخضر CEEDE7 – يغطي تحت
                         ]),
                         center: .topTrailing,
@@ -77,28 +75,9 @@ struct HomeView: View {
                 VStack {
                     Spacer().frame(height: 60)  // مسافة من فوق
 
-                    //  السيرتش (نفسه في اللايت والدارك)
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray.opacity(0.7))
-
-                        TextField("Search", text: $searchText)
-                            .textFieldStyle(.plain)
-
-                        Button {
-                            // ممكن تضيف فويس سيرش لاحقًا
-                        } label: {
-                            Image(systemName: "mic.fill")
-                                .foregroundColor(.gray.opacity(0.7))
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.white.opacity(0.9))
-                    )
-                    .padding(.horizontal, 24)
+                
+                    SystemSearchBar(text: $searchText)
+                        .padding(.horizontal, 24)
 
                     // ===== مكان الكروت (تم تفعيله بالفيد الحقيقي) =====
                     ScrollView {
@@ -258,7 +237,44 @@ private struct PostRow: View {
     }
 }
 
+/////////////////////////////////////////////////
+// MARK: - System Search Bar (UISearchBar ديفولت)
+/////////////////////////////////////////////////
+
+struct SystemSearchBar: UIViewRepresentable {
+    @Binding var text: String
+
+    func makeUIView(context: Context) -> UISearchBar {
+        let searchBar = UISearchBar(frame: .zero)
+        searchBar.delegate = context.coordinator
+        searchBar.searchBarStyle = .minimal   // الشكل الديفولت الشفاف
+        searchBar.placeholder = "Search"
+        return searchBar
+    }
+
+    func updateUIView(_ uiView: UISearchBar, context: Context) {
+        uiView.text = text
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UISearchBarDelegate {
+        var parent: SystemSearchBar
+
+        init(_ parent: SystemSearchBar) {
+            self.parent = parent
+        }
+
+        func searchBar(_ searchBar: UISearchBar,
+                       textDidChange searchText: String) {
+            parent.text = searchText
+        }
+    }
+}
+
 #Preview {
     HomeView()
-    //.preferredColorScheme(.dark)
+    // .preferredColorScheme(.dark)
 }
