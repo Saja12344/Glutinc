@@ -30,8 +30,8 @@ struct HomeView: View {
 
                 RadialGradient(
                     gradient: Gradient(colors: [
-                        Color("GradientEnd"),    // الأزرق
-                        Color("GradientStart"),  // الأبيض الخفيف
+                        Color("GradientEnd"),                        // الأزرق
+                        Color("GradientStart").opacity(0.10),       // الأبيض مرررة خفيف
                         .clear
                     ]),
                     center: .topTrailing,
@@ -42,7 +42,6 @@ struct HomeView: View {
                 .ignoresSafeArea()
             } else {
                 // لايت مود: نفس الـ Radial
-
                 RadialGradient(
                     gradient: Gradient(colors: [
                         Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
@@ -61,30 +60,11 @@ struct HomeView: View {
             VStack {
                 Spacer().frame(height: 60)  // مسافة من فوق
 
-                //  السيرتش (نفسه في اللايت والدارك)
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray.opacity(0.7))
+                // ✅ السيرتش الديفولت من النظام
+                SystemSearchBar(text: $searchText)
+                    .padding(.horizontal, 24)
 
-                    TextField("Search", text: $searchText)
-                        .textFieldStyle(.plain)
-
-                    Button {
-
-                    } label: {
-                        Image(systemName: "mic.fill")
-                            .foregroundColor(.gray.opacity(0.7))
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white.opacity(0.9))
-                )
-                .padding(.horizontal, 24)
-
-                Spacer()                    // مكان الكروت (فاضي الآن)
+                Spacer()
                 Spacer().frame(height: 80)  // مساحة للتاب بار
             }
 
@@ -96,7 +76,7 @@ struct HomeView: View {
     }
 }
 
-//- Glass Tab Bar
+// - Glass Tab Bar
 
 struct GlassTabBar: View {
     @Binding var selectedTab: HomeTab
@@ -117,7 +97,7 @@ struct GlassTabBar: View {
                 .stroke(Color.white.opacity(0.7), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 8)
-        .frame(width: 260, height: 72)            // ما يغطي الشاشة كلها
+        .frame(width: 260, height: 72)
     }
 
     private func tabButton(_ tab: HomeTab, imageName: String) -> some View {
@@ -125,7 +105,6 @@ struct GlassTabBar: View {
             selectedTab = tab
         } label: {
             ZStack {
-                // المربع الصغير تحت التاب المختار
                 if selectedTab == tab {
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
                         .fill(Color.white.opacity(0.95))
@@ -137,18 +116,54 @@ struct GlassTabBar: View {
 
                 Image(imageName)
                     .resizable()
-                    .renderingMode(.template)     // عشان يتلوّن
+                    .renderingMode(.template)
                     .scaledToFit()
                     .frame(width: 26, height: 26)
                     .foregroundColor(
                         selectedTab == tab
-                        ? Color("PrimaryBlue")     // أزرق على المختار
+                        ? Color("PrimaryBlue")
                         : Color.primary.opacity(0.4)
                     )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/////////////////////////////////////////////////
+// MARK: - System Search Bar (نفس الملف)
+/////////////////////////////////////////////////
+
+struct SystemSearchBar: UIViewRepresentable {
+    @Binding var text: String
+
+    func makeUIView(context: Context) -> UISearchBar {
+        let searchBar = UISearchBar(frame: .zero)
+        searchBar.delegate = context.coordinator
+        searchBar.searchBarStyle = .minimal   // الشكل الديفولت الشفاف
+        searchBar.placeholder = "Search"
+        return searchBar
+    }
+
+    func updateUIView(_ uiView: UISearchBar, context: Context) {
+        uiView.text = text
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UISearchBarDelegate {
+        var parent: SystemSearchBar
+
+        init(_ parent: SystemSearchBar) {
+            self.parent = parent
+        }
+
+        func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+            parent.text = searchText
+        }
     }
 }
 
