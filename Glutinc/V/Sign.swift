@@ -16,6 +16,8 @@ struct Signup: View {
         
             VStack(spacing: 30) {
                 
+                AppGradient.background.ignoresSafeArea()
+                
                 Text("Sign up for sharing with people")
                     .font(.system(size: 27, weight: .bold))
                     .foregroundColor(.black)

@@ -4,81 +4,64 @@
 //
 //  Created by Deemah Alhazmi on 08/12/2025.
 //
+//
+//  CloudKitModels.swift
+//  Glutinc22
+//
 
-import Foundation
 import CloudKit
 import UIKit
 
-enum CKTypes {
+/// Record type names & keys in CloudKit
+enum CKSchema {
     static let userProfile = "UserProfile"
-    static let post        = "Post"
+
+    enum UserKeys {
+        static let appleID      = "appleID"        // String
+        static let displayName  = "displayName"    // String
+        static let email        = "email"          // String? (optional)
+        static let photoAsset   = "photoAsset"     // CKAsset? (optional)
+    }
 }
 
-enum CKDB {
-    static let container = CKContainer.default()
-    static let publicDB  = container.publicCloudDatabase
-    static let privateDB = container.privateCloudDatabase
-}
-
-// MARK: - UserProfile
+/// Lightweight model that we map to/from CKRecord
 struct UserProfile {
     var recordID: CKRecord.ID?
-    var appleID: String             // from Sign in with Apple credential.user
+    var appleID: String
     var displayName: String
     var email: String?
     var photoAsset: CKAsset?
 
-    init(appleID: String, displayName: String, email: String?) {
+    init(record: CKRecord) {
+        self.recordID   = record.recordID
+        self.appleID    = record[CKSchema.UserKeys.appleID] as? String ?? ""
+        self.displayName = record[CKSchema.UserKeys.displayName] as? String ?? ""
+        self.email      = record[CKSchema.UserKeys.email] as? String
+        self.photoAsset = record[CKSchema.UserKeys.photoAsset] as? CKAsset
+    }
+
+    init(appleID: String, displayName: String, email: String? = nil, photoAsset: CKAsset? = nil) {
+        self.recordID = nil
         self.appleID = appleID
         self.displayName = displayName
         self.email = email
+        self.photoAsset = photoAsset
     }
 
-    init?(record: CKRecord) {
-        guard record.recordType == CKTypes.userProfile else { return nil }
-        recordID    = record.recordID
-        appleID     = record["appleID"] as? String ?? ""
-        displayName = record["displayName"] as? String ?? ""
-        email       = record["email"] as? String
-        photoAsset  = record["photo"] as? CKAsset
-    }
+    func toRecord(in zoneID: CKRecordZone.ID? = nil) -> CKRecord {
+        let record: CKRecord
+        if let id = recordID {
+            record = CKRecord(recordType: CKSchema.userProfile, recordID: id)
+        } else if let zoneID {
+            record = CKRecord(recordType: CKSchema.userProfile, zoneID: zoneID)
+        } else {
+            record = CKRecord(recordType: CKSchema.userProfile)
+        }
 
-    func toRecord(existing: CKRecord? = nil) -> CKRecord {
-        let r = existing ?? CKRecord(recordType: CKTypes.userProfile)
-        r["appleID"]     = appleID as CKRecordValue
-        r["displayName"] = displayName as CKRecordValue
-        if let email { r["email"] = email as CKRecordValue }
-        if let photoAsset { r["photo"] = photoAsset }
-        return r
+        record[CKSchema.UserKeys.appleID]     = appleID as CKRecordValue
+        record[CKSchema.UserKeys.displayName] = displayName as CKRecordValue
+        if let email { record[CKSchema.UserKeys.email] = email as CKRecordValue }
+        if let photoAsset { record[CKSchema.UserKeys.photoAsset] = photoAsset }
+        return record
     }
 }
-
-// MARK: - Post (community in Public DB)
-/*struct CKPost {
-    var recordID: CKRecord.ID?
-    var text: String
-    var imageAsset: CKAsset?
-    var createdAt: Date
-
-    init(text: String, imageAsset: CKAsset? = nil, createdAt: Date = Date()) {
-        self.text = text
-        self.imageAsset = imageAsset
-        self.createdAt = createdAt
-    }
-
-    init?(record: CKRecord) {
-        guard record.recordType == CKTypes.post else { return nil }
-        recordID   = record.recordID
-        text       = record["text"] as? String ?? ""
-        imageAsset = record["image"] as? CKAsset
-        createdAt  = record["createdAt"] as? Date ?? Date()
-    }
-
-    func toRecord(existing: CKRecord? = nil) -> CKRecord {
-        let r = existing ?? CKRecord(recordType: CKTypes.post)
-        r["text"]      = text as CKRecordValue
-        r["createdAt"] = createdAt as CKRecordValue
-        if let imageAsset { r["image"] = imageAsset }
-        return r
-    }
-}*/
