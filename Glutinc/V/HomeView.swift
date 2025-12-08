@@ -1,10 +1,12 @@
 //
-//  Untitled.swift
+//  HomeView.swift
 //  Glutinc22
 //
 //  Created by dana on 16/06/1447 AH.
 //
+
 import SwiftUI
+import CloudKit
 
 // تابّات التاب بار
 enum HomeTab {
@@ -18,80 +20,148 @@ struct HomeView: View {
     @State private var selectedTab: HomeTab = .scan
     @Environment(\.colorScheme) private var colorScheme   // نعرف هل لايت ولا دارك
 
+    // ✅ فيد المجتمع (iCloud Public DB)
+    @StateObject private var feedVM = FeedVM()
+    @State private var goToScan = false
+    @State private var goToProfile = false
+
+    // ✅ صار CKPost بدل Post
+    var filteredPosts: [CKPost] {
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return feedVM.posts }
+        return feedVM.posts.filter { post in
+            // عدل الحقول حسب Model لو احتجت
+            post.content.localizedCaseInsensitiveContains(q) ||
+            post.title.localizedCaseInsensitiveContains(q)
+        }
+    }
+
     var body: some View {
-        ZStack(alignment: .bottom) {
+        NavigationStack {
+            ZStack(alignment: .bottom) {
 
-            // - الخلفية (لايت + دارك)
+                // - الخلفية (لايت + دارك)
+                if colorScheme == .dark {
+                    // دارك مود: خلفية غامقة + Radial خفيف فوقها
+                    Color("BackgroundMain")
+                        .ignoresSafeArea()
 
-            if colorScheme == .dark {
-                // دارك مود: خلفية غامقة + Radial خفيف فوقها
-                Color("BackgroundMain")
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color("GradientEnd"),    // الأزرق
+                            Color("GradientStart"),  // الأبيض الخفيف
+                            .clear
+                        ]),
+                        center: .topTrailing,
+                        startRadius: 40,
+                        endRadius: 600
+                    )
+                    .opacity(0.9)
                     .ignoresSafeArea()
-
-                RadialGradient(
-                    gradient: Gradient(colors: [
-                        Color("GradientEnd"),    // الأزرق
-                        Color("GradientStart"),  // الأبيض الخفيف
-                        .clear
-                    ]),
-                    center: .topTrailing,
-                    startRadius: 40,
-                    endRadius: 600
-                )
-                .opacity(0.9)
-                .ignoresSafeArea()
-            } else {
-                // لايت مود: نفس الـ Radial
-
-                RadialGradient(
-                    gradient: Gradient(colors: [
-                        Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
-                        Color("GradientStart"),  // الأبيض FCFCFC – بالنص
-                        Color("GradientMiddle")  // الأخضر CEEDE7 – يغطي تحت
-                    ]),
-                    center: .topTrailing,
-                    startRadius: 40,
-                    endRadius: 600
-                )
-                .ignoresSafeArea()
-            }
-
-            // - المحتوى
-
-            VStack {
-                Spacer().frame(height: 60)  // مسافة من فوق
-
-                //  السيرتش (نفسه في اللايت والدارك)
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray.opacity(0.7))
-
-                    TextField("Search", text: $searchText)
-                        .textFieldStyle(.plain)
-
-                    Button {
-
-                    } label: {
-                        Image(systemName: "mic.fill")
-                            .foregroundColor(.gray.opacity(0.7))
-                    }
+                } else {
+                    // لايت مود: نفس الـ Radial
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
+                            Color("GradientStart"),  // الأبيض FCFCFC – بالنص
+                            Color("GradientMiddle")  // الأخضر CEEDE7 – يغطي تحت
+                        ]),
+                        center: .topTrailing,
+                        startRadius: 40,
+                        endRadius: 600
+                    )
+                    .ignoresSafeArea()
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white.opacity(0.9))
-                )
-                .padding(.horizontal, 24)
 
-                Spacer()                    // مكان الكروت (فاضي الآن)
-                Spacer().frame(height: 80)  // مساحة للتاب بار
+                // - المحتوى
+                VStack {
+                    Spacer().frame(height: 60)  // مسافة من فوق
+
+                    //  السيرتش (نفسه في اللايت والدارك)
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray.opacity(0.7))
+
+                        TextField("Search", text: $searchText)
+                            .textFieldStyle(.plain)
+
+                        Button {
+                            // ممكن تضيف فويس سيرش لاحقًا
+                        } label: {
+                            Image(systemName: "mic.fill")
+                                .foregroundColor(.gray.opacity(0.7))
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.9))
+                    )
+                    .padding(.horizontal, 24)
+
+                    // ===== مكان الكروت (تم تفعيله بالفيد الحقيقي) =====
+                    ScrollView {
+                        LazyVStack(spacing: 14) {
+                            ForEach(Array(filteredPosts.enumerated()), id: \.element.id) { index, post in
+                                PostRow(post: post)
+                                    .onAppear {
+                                        // تحميل المزيد عند الاقتراب من آخر عنصر
+                                        if index >= filteredPosts.count - 3 {
+                                            Task { await feedVM.loadMore() }
+                                        }
+                                    }
+                            }
+
+                            // زر تحميل المزيد إذا رغبت يدويًا
+                            if !filteredPosts.isEmpty {
+                                Button(action: { Task { await feedVM.loadMore() } }) {
+                                    Text("Load more")
+                                        .font(.footnote)
+                                        .foregroundStyle(.primary)
+                                        .padding(.horizontal, 14).padding(.vertical, 8)
+                                        .background(.ultraThinMaterial, in: Capsule())
+                                }
+                                .padding(.top, 6)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .refreshable {
+                        await feedVM.load()
+                    }
+
+                    Spacer().frame(height: 80)  // مساحة للتاب بار
+                }
+
+                // التاب بار القلاسي
+                GlassTabBar(selectedTab: $selectedTab)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 24)
+                    .onChange(of: selectedTab) { _, newValue in
+                        // تنقل بسيط حسب التاب
+                        switch newValue {
+                        case .scan:    goToScan = true
+                        case .profile: goToProfile = true
+                        case .wheat:   break // صفحة المجتمع الحالية
+                        }
+                    }
+
+                // روابط تنقل مخفية
+                NavigationLink("", isActive: $goToScan) {
+                    CameraView().navigationBarHidden(true)
+                }.hidden()
+
+                NavigationLink("", isActive: $goToProfile) {
+                    // استبدله بصفحتك الحقيقية
+                    Text("Profile").navigationTitle("Profile")
+                }.hidden()
             }
-
-            // التاب بار القلاسي
-            GlassTabBar(selectedTab: $selectedTab)
-                .padding(.horizontal, 40)
-                .padding(.bottom, 24)
+            .navigationBarHidden(true)
+            .task {
+                // تحميل أولي للفيد
+                await feedVM.load()
+            }
         }
     }
 }
@@ -152,7 +222,43 @@ struct GlassTabBar: View {
     }
 }
 
+// ===== واجهة عنصر الفيد =====
+// ✅ تستخدم CKPost الآن (image + content/title)
+
+private struct PostRow: View {
+    let post: CKPost
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let img = post.image {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
+                    .clipped()
+                    .cornerRadius(16)
+            }
+
+            Text(post.content.isEmpty ? post.title : post.content)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+        )
+    }
+}
+
 #Preview {
     HomeView()
-        //.preferredColorScheme(.dark)
+    //.preferredColorScheme(.dark)
 }

@@ -24,6 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		26C7DE122EE6EFC60017B6F4 /* Glutinc22.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Glutinc22.entitlements; sourceTree = "<group>"; };
 		A8954D882EDD7E7F00A2DDD4 /* Glutinc22.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glutinc22.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8954D952EDD7E8100A2DDD4 /* Glutinc22Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Glutinc22Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8954D9F2EDD7E8100A2DDD4 /* Glutinc22UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Glutinc22UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,6 +76,7 @@
 		A8954D7F2EDD7E7F00A2DDD4 = {
 			isa = PBXGroup;
 			children = (
+				26C7DE122EE6EFC60017B6F4 /* Glutinc22.entitlements */,
 				A8954D8A2EDD7E7F00A2DDD4 /* Glutinc */,
 				A8954D982EDD7E8100A2DDD4 /* GlutincTests */,
 				A8954DA22EDD7E8100A2DDD4 /* GlutincUITests */,
@@ -397,6 +399,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Glutinc22.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YM2L953M9C;
@@ -431,6 +434,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Glutinc22.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YM2L953M9C;

@@ -32,7 +32,7 @@ struct ProfileView: View {
                 RadialGradient(
                     gradient: Gradient(colors: [
                         Color("GradientEnd"),    // الأزرق
-                        Color("GradientStart"),  // الأبيض الخفيف
+                       // Color("GradientStart"),  // الأبيض الخفيف
                         .clear
                     ]),
                     center: .topTrailing,
@@ -47,7 +47,7 @@ struct ProfileView: View {
                 RadialGradient(
                     gradient: Gradient(colors: [
                         Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
-                        Color("GradientStart"),  // الأبيض FCFCFC – بالنص
+                       // Color("GradientStart"),  // الأبيض FCFCFC – بالنص
                         Color("GradientMiddle")  // الأخضر CEEDE7 – يغطي تحت
                     ]),
                     center: .topTrailing,
@@ -71,7 +71,7 @@ struct ProfileView: View {
                     .frame(width: 110, height: 110).clipShape(Circle())
                     .overlay(Circle().stroke(.white.opacity(0.85), lineWidth: 3))
 
-                    Text(vm.user.name).foregroundStyle(Color.teal)
+                    Text(vm.user.name).foregroundStyle(Color.black)
                         .font(.system(size: 22, weight: .semibold))
                 }
                 .padding(.top, 40)
@@ -86,9 +86,9 @@ struct ProfileView: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "text.justify")
                                     .font(.system(size: 20))
-                                    .foregroundStyle(selectedSegment == 1 ? Color.teal : .white.opacity(0.7))
+                                    .foregroundStyle(selectedSegment == 1 ? Color.black : .white.opacity(0.7))
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.teal)
+                                    .fill(Color.black)
                                     .frame(width: selectedSegment == 1 ? 40 : 0, height: 3)
                                     .animation(.easeInOut, value: selectedSegment)
                             }
@@ -101,9 +101,9 @@ struct ProfileView: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "bookmark.fill")
                                     .font(.system(size: 20))
-                                    .foregroundStyle(selectedSegment == 2 ? Color.teal : .white.opacity(0.7))
+                                    .foregroundStyle(selectedSegment == 2 ? Color.black : .white.opacity(0.7))
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.teal)
+                                    .fill(Color.black)
                                     .frame(width: selectedSegment == 2 ? 40 : 0, height: 3)
                                     .animation(.easeInOut, value: selectedSegment)
                             }
