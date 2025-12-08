@@ -611,27 +611,251 @@
 //    //.preferredColorScheme(.dark)
 //>>>>>>> main
 //}
+//import SwiftUI
+//import CloudKit
+//
+//struct HomeView: View {
+//
+//    // MARK: - UI States
+//    @State private var searchText: String = ""
+//
+//    // MARK: - Environment
+//    @Environment(\.colorScheme) private var colorScheme
+//
+//    // ✅ ViewModel الفيد
+//    @StateObject private var feedVM = FeedVM()
+//    @StateObject private var cloudVM = UserCloudVM()
+//
+//
+//    // ✅ فلترة البحث
+//    var filteredPosts: [ProductModel] {
+//        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+//        guard !q.isEmpty else { return feedVM.posts }
+//        return cloudVM.posts.filter {
+//            $0.title.localizedCaseInsensitiveContains(q) ||
+//            $0.content.localizedCaseInsensitiveContains(q)
+//        }
+//    }
+//
+//    var body: some View {
+//        NavigationStack {
+//            ZStack {
+//
+//                // ✅ الخلفية (دارك + لايت)
+//                if colorScheme == .dark {
+//                    Color("BackgroundMain")
+//                        .ignoresSafeArea()
+//
+//                    RadialGradient(
+//                        gradient: Gradient(colors: [
+//                            Color("GradientEnd"),
+//                            Color("GradientStart"),
+//                            .clear
+//                        ]),
+//                        center: .topTrailing,
+//                        startRadius: 40,
+//                        endRadius: 600
+//                    )
+//                    .opacity(0.9)
+//                    .ignoresSafeArea()
+//
+//                } else {
+//                    RadialGradient(
+//                        gradient: Gradient(colors: [
+//                            Color("GradientEnd"),
+//                            Color("GradientStart"),
+//                            Color("GradientMiddle")
+//                        ]),
+//                        center: .topTrailing,
+//                        startRadius: 40,
+//                        endRadius: 600
+//                    )
+//                    .ignoresSafeArea()
+//                }
+//
+//                // ✅ المحتوى
+//                VStack {
+//                    Spacer().frame(height: 60)
+//
+//                    // ✅ السيرش
+//                    HStack {
+//                        Image(systemName: "magnifyingglass")
+//                            .foregroundColor(.gray.opacity(0.7))
+//
+//                        TextField("Search", text: $searchText)
+//                            .textFieldStyle(.plain)
+//
+//                        Button { } label: {
+//                            Image(systemName: "mic.fill")
+//                                .foregroundColor(.gray.opacity(0.7))
+//                        }
+//                    }
+//                    .padding(.horizontal, 14)
+//                    .padding(.vertical, 10)
+//                    .background(
+//                        RoundedRectangle(cornerRadius: 18)
+//                            .fill(Color.white.opacity(0.9))
+//                    )
+//                    .padding(.horizontal, 24)
+//
+//                    // ✅ فيد البوستات
+//                    ScrollView {
+//                        LazyVStack(spacing: 14) {
+//                            ForEach(Array(filteredPosts.enumerated()), id: \.element.id) { index, post in
+//
+//                                PostRow(post: post)   // ✅ الآن يستقبل ProductModel
+//
+//                                    .onAppear {
+//                                        if index >= filteredPosts.count - 3 {
+//                                            Task {
+//                                                await feedVM.loadMore()   // ✅ تحميل المزيد
+//                                            }
+//                                        }
+//                                    }
+//                            }
+//                        
+//                    
+//
+//
+//                            if !filteredPosts.isEmpty {
+//                                Button {
+//                                    Task { await feedVM.loadMore() }
+//                                } label: {
+//                                    Text("Load more")
+//                                        .font(.footnote)
+//                                        .foregroundStyle(.primary)
+//                                        .padding(.horizontal, 14)
+//                                        .padding(.vertical, 8)
+//                                        .background(.ultraThinMaterial, in: Capsule())
+//                                }
+//                                .padding(.top, 8)
+//                            }
+//                        }
+//                        .padding(.horizontal, 20)
+//                    }
+//                    .refreshable {
+//                        await feedVM.load()
+//                    }
+//                }
+//            }
+//            .navigationBarHidden(true)
+//            .task {
+//                await feedVM.load()
+//            }
+//        }
+//    }
+//}
+//
+//// MARK: - ✅ عنصر البوست من CloudKit
+//private struct PostRow: View {
+//
+//    let post: ProductModel   // ✅ بدل CKPost
+//
+//    var body: some View {
+//        VStack(alignment: .leading, spacing: 10) {
+//
+//            // ✅ صورة المنتج (مؤقتًا System Image)
+//            ZStack {
+//                Rectangle()
+//                    .fill(Color.gray.opacity(0.25))
+//                    .frame(height: 220)
+//                    .cornerRadius(16)
+//
+//                Image(systemName: "photo")
+//                    .font(.system(size: 40))
+//                    .foregroundColor(.gray.opacity(0.6))
+//            }
+//
+//            // ✅ اسم المنتج
+//            Text(post.productName)
+//                .font(.headline)
+//                .foregroundStyle(.primary)
+//                .lineLimit(2)
+//
+//            // ✅ اسم المستخدم + التقييم
+//            HStack {
+//                Text("@\(post.username)")
+//                    .font(.subheadline)
+//                    .foregroundColor(.secondary)
+//
+//                Spacer()
+//
+//                HStack(spacing: 4) {
+//                    Image(systemName: "star.fill")
+//                        .font(.system(size: 12))
+//                        .foregroundColor(.yellow)
+//
+//                    Text(String(format: "%.1f", post.rating))
+//                        .font(.subheadline)
+//                        .foregroundColor(.secondary)
+//                }
+//            }
+//
+//            // ✅ السعر + الموقع
+//            HStack {
+//                Text("💰 \(post.price)")
+//                Spacer()
+//                Text("📍 \(post.location)")
+//            }
+//            .font(.caption)
+//            .foregroundColor(.secondary)
+//
+//            // ✅ وسم الغلوتن
+//            HStack {
+//                Spacer()
+//
+//                Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+//                    .font(.caption2)
+//                    .fontWeight(.semibold)
+//                    .padding(.horizontal, 8)
+//                    .padding(.vertical, 3)
+//                    .background(
+//                        Capsule()
+//                            .fill(post.isGlutenFree
+//                                  ? Color.green.opacity(0.9)
+//                                  : Color.red.opacity(0.9))
+//                    )
+//                    .foregroundColor(.white)
+//            }
+//        }
+//        .padding(14)
+//        .background(
+//            RoundedRectangle(cornerRadius: 20)
+//                .fill(.ultraThinMaterial)
+//        )
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 20)
+//                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+//        )
+//    }
+//}
+//
+//
+//#Preview {
+//    HomeView()
+//}
 import SwiftUI
-import CloudKit
 
 struct HomeView: View {
 
-    // MARK: - UI States
+    @StateObject private var cloudVM = UserCloudVM()
     @State private var searchText: String = ""
 
-    // MARK: - Environment
     @Environment(\.colorScheme) private var colorScheme
 
-    // ✅ ViewModel الفيد
-    @StateObject private var feedVM = FeedVM()
-
-    // ✅ فلترة البحث
-    var filteredPosts: [CKPost] {
+    // ✅ فلترة صحيحة 100% على ProductModel
+    var filteredProducts: [ProductModel] {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return feedVM.posts }
-        return feedVM.posts.filter {
-            $0.title.localizedCaseInsensitiveContains(q) ||
-            $0.content.localizedCaseInsensitiveContains(q)
+
+        guard !q.isEmpty else {
+            return cloudVM.products
+        }
+
+        return cloudVM.products.filter { product in
+            product.productName.localizedCaseInsensitiveContains(q) ||
+            product.username.localizedCaseInsensitiveContains(q) ||
+            product.location.localizedCaseInsensitiveContains(q) ||
+            product.category.localizedCaseInsensitiveContains(q)
         }
     }
 
@@ -639,140 +863,122 @@ struct HomeView: View {
         NavigationStack {
             ZStack {
 
-                // ✅ الخلفية (دارك + لايت)
                 if colorScheme == .dark {
-                    Color("BackgroundMain")
-                        .ignoresSafeArea()
-
-                    RadialGradient(
-                        gradient: Gradient(colors: [
-                            Color("GradientEnd"),
-                            Color("GradientStart"),
-                            .clear
-                        ]),
-                        center: .topTrailing,
-                        startRadius: 40,
-                        endRadius: 600
-                    )
-                    .opacity(0.9)
-                    .ignoresSafeArea()
-
+                    Color.black.ignoresSafeArea()
                 } else {
-                    RadialGradient(
-                        gradient: Gradient(colors: [
-                            Color("GradientEnd"),
-                            Color("GradientStart"),
-                            Color("GradientMiddle")
-                        ]),
-                        center: .topTrailing,
-                        startRadius: 40,
-                        endRadius: 600
-                    )
-                    .ignoresSafeArea()
+                    Color.white.ignoresSafeArea()
                 }
 
-                // ✅ المحتوى
                 VStack {
-                    Spacer().frame(height: 60)
+                    Spacer().frame(height: 40)
 
-                    // ✅ السيرش
+                    // ✅ Search Bar
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray.opacity(0.7))
+                            .foregroundColor(.gray)
 
                         TextField("Search", text: $searchText)
                             .textFieldStyle(.plain)
-
-                        Button { } label: {
-                            Image(systemName: "mic.fill")
-                                .foregroundColor(.gray.opacity(0.7))
-                        }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color.white.opacity(0.9))
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.gray.opacity(0.15))
                     )
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal)
 
-                    // ✅ فيد البوستات
+                    // ✅ Feed
                     ScrollView {
                         LazyVStack(spacing: 14) {
-                            ForEach(Array(filteredPosts.enumerated()), id: \.element.id) { index, post in
-                                PostRow(post: post)
-                                    .onAppear {
-                                        if index >= filteredPosts.count - 3 {
-                                            Task { await feedVM.loadMore() }
-                                        }
-                                    }
+
+                            ForEach(filteredProducts) { product in
+                                PostRow(post: product)
                             }
 
-                            if !filteredPosts.isEmpty {
-                                Button {
-                                    Task { await feedVM.loadMore() }
-                                } label: {
-                                    Text("Load more")
-                                        .font(.footnote)
-                                        .foregroundStyle(.primary)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 8)
-                                        .background(.ultraThinMaterial, in: Capsule())
-                                }
-                                .padding(.top, 8)
+                            if filteredProducts.isEmpty {
+                                Text("No products yet")
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 40)
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal)
                     }
-                    .refreshable {
-                        await feedVM.load()
-                    }
+
+                   
                 }
             }
             .navigationBarHidden(true)
             .task {
-                await feedVM.load()
+                await cloudVM.loadProducts()
             }
         }
     }
 }
-
-// MARK: - ✅ عنصر البوست من CloudKit
-
 private struct PostRow: View {
-    let post: CKPost
+
+    let post: ProductModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
 
-            if let img = post.image {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 220)
-                    .clipped()
+            ZStack {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.25))
+                    .frame(height: 180)
                     .cornerRadius(16)
+
+                Image(systemName: "photo")
+                    .font(.system(size: 40))
+                    .foregroundColor(.gray)
             }
 
-            Text(post.content.isEmpty ? post.title : post.content)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(post.productName)
+                .font(.headline)
+
+            HStack {
+                Text("@\(post.username)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.yellow)
+
+                    Text(String(format: "%.1f", post.rating))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            HStack {
+                Text("💰 \(post.price)")
+                Spacer()
+                Text("📍 \(post.location)")
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+
+            HStack {
+                Spacer()
+
+                Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(post.isGlutenFree ? .green : .red)
+                    )
+                    .foregroundColor(.white)
+            }
         }
-        .padding(14)
+        .padding()
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 18)
                 .fill(.ultraThinMaterial)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.white.opacity(0.25), lineWidth: 1)
-        )
     }
-}
-
-#Preview {
-    HomeView()
 }

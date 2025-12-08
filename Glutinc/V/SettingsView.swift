@@ -6,7 +6,7 @@ import PhotosUI
 import UIKit
 
 struct SettingsView: View {
-    @ObservedObject var vm: UserVM
+    @ObservedObject var vm: UserCloudVM
 
     // Name edit popup
     @State private var showNamePopup: Bool = false
@@ -41,7 +41,11 @@ struct SettingsView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(AppColors.card.opacity(0.55))     // ← darker
-                         
+                           // .fill(.ultraThinMaterial)
+                            //.overlay(
+                            //    RoundedRectangle(cornerRadius: 16)
+                              //      .stroke(Color.white.opacity(0.25), lineWidth: 1)  // subtle border
+                           // )
                     )
 
 

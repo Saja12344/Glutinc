@@ -490,10 +490,10 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @ObservedObject var vm: UserVM
+    @ObservedObject var vm: UserCloudVM
     @Environment(\.colorScheme) private var colorScheme
 
-    private var isAR: Bool {
+     private var isAR: Bool {
         Locale.preferredLanguages.first?.hasPrefix("ar") == true
     }
 
@@ -617,8 +617,8 @@ struct ProfileView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(
                     destination: SettingsView(vm: vm)
-                        .environment(\.layoutDirection,
-                                     isAR ? .rightToLeft : .leftToRight)
+                       
+
                 ) {
                     Image(systemName: "gearshape")
                         .foregroundStyle(.black)
@@ -630,7 +630,7 @@ struct ProfileView: View {
 
 // ✅ Preview
 #Preview("Profile – EN") {
-    let vm = UserVM()
+    let vm = UserCloudVM()
     return NavigationStack {
         ProfileView(vm: vm)
     }

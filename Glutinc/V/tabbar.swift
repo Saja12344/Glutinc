@@ -15,6 +15,7 @@ enum HomeTab {
 struct MainTabContainer: View {
 
     @State private var selectedTab: HomeTab = .wheat
+    @StateObject var userVM = UserCloudVM()
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -30,7 +31,7 @@ struct MainTabContainer: View {
                     CameraView(selectedTab: $selectedTab)   // ✅ مع زر رجوع
 
                 case .profile:
-                    ProfileView(vm: UserVM())
+                    ProfileView(vm: userVM)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

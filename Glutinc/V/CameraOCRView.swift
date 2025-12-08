@@ -3,21 +3,22 @@ import SwiftUI
 
 struct CameraView: View {
     
-    @StateObject private var vm = CameraOCRViewModel()
+    @StateObject private var cameraVM = CameraOCRViewModel()
     @State private var showImagePicker = false
     @State private var capturedImage: UIImage?
     @Environment(\.layoutDirection) var layoutDirection
     @State private var isFlashOn = false
     @Binding var selectedTab: HomeTab
+    @StateObject var cloudVM = UserCloudVM()
 
     var body: some View {
         NavigationView {
             ZStack {
                 // خلفية الكاميرا
-                CameraPreview(session: vm.session)
+                CameraPreview(session: cameraVM.session)
                     .ignoresSafeArea()
-                    .onAppear { vm.checkCameraPermissionAndStart() }
-                    .onDisappear { vm.stopCamera() }
+                    .onAppear { cameraVM.checkCameraPermissionAndStart() }
+                    .onDisappear { cameraVM.stopCamera() }
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 0)
@@ -27,7 +28,7 @@ struct CameraView: View {
                                     x: value.location.x / screenSize.width,
                                     y: value.location.y / screenSize.height
                                 )
-                                vm.focus(at: focusPoint)
+                                cameraVM.focus(at: focusPoint)
                             }
                     )
                 
@@ -84,7 +85,7 @@ struct CameraView: View {
                             Spacer()
                             
                             // ✅ زر الكاميرا (المنتصف)
-                            Button(action: { vm.takePhoto() }) {
+                            Button(action: { cameraVM.takePhoto() }) {
                                 ZStack {
                                     Circle()
                                         .stroke(Color.btn, lineWidth: 5)
@@ -101,7 +102,7 @@ struct CameraView: View {
                             // ✅ زر الفلاش (ثابت يسار دائمًا)
                             Button(action: {
                                 isFlashOn.toggle()
-                                vm.toggleFlash(isOn: isFlashOn)
+                                cameraVM.toggleFlash(isOn: isFlashOn)
                             }) {
                                 Image(systemName: isFlashOn ? "bolt.fill" : "bolt.slash.fill")
                                     .font(.system(size: 34)) // ✅ أكبر
@@ -136,18 +137,18 @@ struct CameraView: View {
                             Spacer()   // ✅ هذا يضمن أن البداية من أسفل الشاشة
                             
                             ResultView(
+                                vm: cloudVM,                 // ✅ الصحيح
                                 image: image,
-                                ingredients: vm.glutenFound,
-                                status: vm.status,
-                                onClose: {
-                                    withAnimation { capturedImage = nil }
-                                },
-                                onPost: {
-                                    print("Post")
-                                }
+                                ingredients: cameraVM.glutenFound,  // ✅ من الكاميرا
+                                status: cameraVM.status,            // ✅ من الكاميرا
+                               
+                                
+                                
                             )
+
+
                             .frame(
-                                height: vm.glutenFound.isEmpty
+                                height: cameraVM.glutenFound.isEmpty
                                 ? UIScreen.main.bounds.height * 0.45
                                 : UIScreen.main.bounds.height * 0.55
                             )
@@ -165,11 +166,11 @@ struct CameraView: View {
                 ImagePicker { image in
                     // صورة من الألبوم
                     capturedImage = image
-                    vm.capturedImage = image
-                    vm.recognizeText(from: image)
+                    cameraVM.capturedImage = image
+                    cameraVM.recognizeText(from: image)
                 }
             }
-            .onChange(of: vm.capturedImage) { img in
+            .onChange(of: cameraVM.capturedImage) { img in
                 // صورة من الكاميرا
                 if let img {
                     capturedImage = img
@@ -221,6 +222,8 @@ struct CameraView: View {
 // 👇 لازم يكون الـ Preview خارج struct CameraView
 struct CameraView_Previews: PreviewProvider {
     static var previews: some View {
-        CameraView(selectedTab: .constant(.scan))
+        CameraView(
+            selectedTab: .constant(.scan)
+        )
     }
 }
