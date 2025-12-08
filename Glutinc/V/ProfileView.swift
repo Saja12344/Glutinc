@@ -13,6 +13,7 @@ struct ProfileView: View {
     @State private var goToShop = false
     @State private var goToScan = false
     @State private var selectedTab: Int = 3   // 1 = shop, 2 = scan, 3 = profile
+    @Environment(\.colorScheme) private var colorScheme
     private var isAR: Bool {
         Locale.preferredLanguages.first?.hasPrefix("ar") == true
     }
@@ -22,7 +23,39 @@ struct ProfileView: View {
 
     var body: some View {
         ZStack {
-            AppGradient.background.ignoresSafeArea()
+           // AppGradient.background.ignoresSafeArea()
+            if colorScheme == .dark {
+                // دارك مود: خلفية غامقة + Radial خفيف فوقها
+                Color("BackgroundMain")
+                    .ignoresSafeArea()
+
+                RadialGradient(
+                    gradient: Gradient(colors: [
+                        Color("GradientEnd"),    // الأزرق
+                        Color("GradientStart"),  // الأبيض الخفيف
+                        .clear
+                    ]),
+                    center: .topTrailing,
+                    startRadius: 40,
+                    endRadius: 600
+                )
+                .opacity(0.9)
+                .ignoresSafeArea()
+            } else {
+                // لايت مود: نفس الـ Radial
+
+                RadialGradient(
+                    gradient: Gradient(colors: [
+                        Color("GradientEnd"),    // الأزرق 2274A5 – من الزاوية
+                        Color("GradientStart"),  // الأبيض FCFCFC – بالنص
+                        Color("GradientMiddle")  // الأخضر CEEDE7 – يغطي تحت
+                    ]),
+                    center: .topTrailing,
+                    startRadius: 40,
+                    endRadius: 600
+                )
+                .ignoresSafeArea()
+            }
             
             VStack(spacing: 20) {
 
@@ -38,7 +71,7 @@ struct ProfileView: View {
                     .frame(width: 110, height: 110).clipShape(Circle())
                     .overlay(Circle().stroke(.white.opacity(0.85), lineWidth: 3))
 
-                    Text(vm.user.name).foregroundStyle(.textPrimary)
+                    Text(vm.user.name).foregroundStyle(Color.teal)
                         .font(.system(size: 22, weight: .semibold))
                 }
                 .padding(.top, 40)
@@ -53,9 +86,9 @@ struct ProfileView: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "text.justify")
                                     .font(.system(size: 20))
-                                    .foregroundStyle(selectedSegment == 1 ? Color.orange : .white.opacity(0.7))
+                                    .foregroundStyle(selectedSegment == 1 ? Color.teal : .white.opacity(0.7))
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.orange)
+                                    .fill(Color.teal)
                                     .frame(width: selectedSegment == 1 ? 40 : 0, height: 3)
                                     .animation(.easeInOut, value: selectedSegment)
                             }
@@ -68,9 +101,9 @@ struct ProfileView: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "bookmark.fill")
                                     .font(.system(size: 20))
-                                    .foregroundStyle(selectedSegment == 2 ? Color.orange : .white.opacity(0.7))
+                                    .foregroundStyle(selectedSegment == 2 ? Color.teal : .white.opacity(0.7))
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.orange)
+                                    .fill(Color.teal)
                                     .frame(width: selectedSegment == 2 ? 40 : 0, height: 3)
                                     .animation(.easeInOut, value: selectedSegment)
                             }
@@ -183,7 +216,7 @@ struct ProfileView: View {
                         SettingsView(vm: vm)
                             .environment(\.layoutDirection, isAR ? .rightToLeft : .leftToRight) // ← NEW
                 ) {
-                    Image(systemName: "gearshape").foregroundStyle(.black).glassEffect()
+                    Image(systemName: "gearshape").foregroundStyle(.black)//.glassEffect()
                 }
             }
         }
