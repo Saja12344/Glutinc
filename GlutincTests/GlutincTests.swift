@@ -4,7 +4,7 @@
 //
 //  Created by saja khalid on 10/06/1447 AH.
 //
-
+/*
 import Testing
 @testable import Glutinc
 
@@ -15,3 +15,4 @@ struct GlutincTests {
     }
 
 }
+*/

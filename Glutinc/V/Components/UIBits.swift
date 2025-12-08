@@ -1,0 +1,68 @@
+//
+//  UIBits.swift
+//  Glutinc
+//
+//  Created by Deemah Alhazmi on 01/12/2025.
+//
+
+import Foundation
+import SwiftUI
+
+
+struct SectionHeader: View {
+    var title: String
+    var color: Color = AppColors.textSecondary
+    var body: some View {
+        Text(title)
+            .foregroundStyle(color)
+            .font(.system(size: 18, weight: .semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+    }
+}
+
+struct SettingRow: View {
+    var icon: String
+    var title: String
+    var tint: Color = .white
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(tint)
+
+                Text(title)
+                    .foregroundStyle(.textPrimary)
+
+                Spacer()
+
+                Image(systemName: "chevron.forward")
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(AppColors.card)
+            )
+        }
+    }
+}
+
+struct ProductCard: View {
+    var imageName: String
+    var body: some View {
+        RoundedRectangle(cornerRadius: 18)
+            .fill(AppColors.card)
+            .frame(height: 150)
+            .overlay(
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
