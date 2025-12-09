@@ -14,10 +14,11 @@ struct Signup: View {
     
     var body: some View {
         
+        AppGradient.background.ignoresSafeArea()
+        
             VStack(spacing: 30) {
                 
-                AppGradient.background.ignoresSafeArea()
-                
+
                 Text("Sign up for sharing with people")
                     .font(.system(size: 27, weight: .bold))
                     .foregroundColor(.black)

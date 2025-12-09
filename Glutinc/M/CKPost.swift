@@ -15,26 +15,30 @@ struct CKPost: Identifiable, Hashable {
     let image: UIImage?
     let createdAt: Date
 
-    init?(record: CKRecord) {
-        guard let title = record["title"] as? String,
-              let content = record["content"] as? String,
-              let createdAt = record.creationDate else { return nil }
+    init(record: CKRecord) {
+        self.id = record.recordID
 
-        var uiImage: UIImage? = nil
-        if let asset = record["image"] as? CKAsset,
+        // Map fields with safe defaults so init is NON-optional
+        self.title = record[CKSchema.PostKeys.title] as? String ?? ""
+        self.content = record["content"] as? String ?? ""
+
+        if let asset = record[CKSchema.PostKeys.imageAsset] as? CKAsset,
            let url = asset.fileURL,
            let data = try? Data(contentsOf: url),
            let img = UIImage(data: data) {
-            uiImage = img
+            self.image = img
+        } else {
+            self.image = nil
         }
 
-        self.id        = record.recordID
-        self.title     = title
-        self.content   = content
-        self.image     = uiImage
-        self.createdAt = createdAt
+        self.createdAt =
+            (record[CKSchema.PostKeys.createdAt] as? Date) ??
+            record.creationDate ??
+            .distantPast
     }
 }
 
-// Compatibility for older views that used `imageAsset`
-extension CKPost { var imageAsset: UIImage? { image } }
+// Back-compat for any old code that referenced `imageAsset`
+extension CKPost {
+    var imageAsset: UIImage? { image }
+}
