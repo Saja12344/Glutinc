@@ -127,17 +127,20 @@ struct CameraView: View {
                         )
                         //
                     }
-                    .ignoresSafeArea(edges: .bottom) // ✅ تمتد لآخر الشاشة حتى مع الـ safe area
+//                    .ignoresSafeArea(edges: .bottom) // ✅ تمتد لآخر الشاشة حتى مع الـ safe area
                     
                     if let image = capturedImage {
                         Color.black.opacity(0.25)
                             .ignoresSafeArea()
+                            .allowsHitTesting(false)
                         
                         VStack {
                             Spacer()   // ✅ هذا يضمن أن البداية من أسفل الشاشة
                             
                             ResultView(
-                                vm: cloudVM,                 // ✅ الصحيح
+                                vm: cloudVM,
+                                capturedImage: $capturedImage,
+                                // ✅ الصحيح
                                 image: image,
                                 ingredients: cameraVM.glutenFound,  // ✅ من الكاميرا
                                 status: cameraVM.status,            // ✅ من الكاميرا
@@ -145,18 +148,22 @@ struct CameraView: View {
                                 
                                 
                             )
+//                            .ignoresSafeArea(edges: .bottom)
+                            .padding(.bottom, 90)
 
 
                             .frame(
                                 height: cameraVM.glutenFound.isEmpty
-                                ? UIScreen.main.bounds.height * 0.45
-                                : UIScreen.main.bounds.height * 0.55
+                                ? UIScreen.main.bounds.height * 0.55
+                                : UIScreen.main.bounds.height * 0.65
                             )
                             .background(.ultraThinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                             .shadow(radius: 12)
                             .ignoresSafeArea(edges: .bottom)
                         }
+                        .transition(.move(edge: .bottom))
+                        .animation(.easeInOut, value: capturedImage)
                     }
                     
                     

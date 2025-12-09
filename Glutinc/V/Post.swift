@@ -414,24 +414,24 @@ struct Post: View {
             VStack(alignment: .leading, spacing: 20) {
 
                 // ✅ زر الرجوع
-                HStack {
-                    ZStack {
-                        Capsule()
-                            .frame(width: 44, height: 44)
-                            .foregroundStyle(Color("GlassColor"))
-                            .glassEffect()
-
-                        Button {
-                            // dismiss لاحقًا إذا حبيتي
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(.white) // ✅ أبيض
-                                .font(.system(size: 18.64, weight: .medium))
-                        }
-                    }
-                    Spacer()
-                }
-                .padding(.top, 20)
+//                HStack {
+//                    ZStack {
+//                        Capsule()
+//                            .frame(width: 44, height: 44)
+//                            .foregroundStyle(Color("GlassColor"))
+//                            .glassEffect()
+//
+//                        Button {
+//                            // dismiss لاحقًا إذا حبيتي
+//                        } label: {
+//                            Image(systemName: "chevron.left")
+//                                .foregroundColor(.white) // ✅ أبيض
+//                                .font(.system(size: 18.64, weight: .medium))
+//                        }
+//                    }
+//                    Spacer()
+//                }
+//                .padding(.top, 20)
 
                 // ✅ مربع الصورة (كاميرا)
                 HStack {

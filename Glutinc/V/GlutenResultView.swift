@@ -12,10 +12,12 @@ import SwiftUI
 struct ResultView: View {
     @Environment(\.layoutDirection) var layoutDirection
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var vm: UserCloudVM   // 👈 مهم
-    @Environment(\.dismiss) private var dismiss
+    @State private var goToPost = false
 
-    let image: UIImage
+    @ObservedObject var vm: UserCloudVM
+    @Binding var capturedImage: UIImage?   // ✅ هنا ثاني
+
+    let image: UIImage                     // ✅ بعدها image
     let ingredients: [GlutenIngredient]
     let status: GlutenStatus
 
@@ -43,7 +45,9 @@ struct ResultView: View {
                 }
 
                 Button {
-                    dismiss()
+                    withAnimation {
+                        capturedImage = nil
+                    }
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 26, weight: .semibold))
@@ -191,8 +195,18 @@ struct ResultView: View {
                         }
                     }
                     
-                    NavigationLink {
-                        Post(cloudVM: vm, isGlutenFree: false)
+//                    NavigationLink {
+//                        Post(cloudVM: vm, isGlutenFree: false)
+//                    } label: {
+//                        Text("Next")
+//                            .frame(width: 180, height: 42)
+//                            .fontWeight(.bold)
+//                            .foregroundStyle(Color(uiColor: .label))
+//                            .glassEffect(.clear.tint(Color.btn.opacity(0.9)))
+//                            .clipShape(RoundedRectangle(cornerRadius: 14))
+//                    }
+                    Button {
+                        goToPost = true
                     } label: {
                         Text("Next")
                             .frame(width: 180, height: 42)
@@ -201,6 +215,14 @@ struct ResultView: View {
                             .glassEffect(.clear.tint(Color.btn.opacity(0.9)))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+
+                    NavigationLink(
+                        destination: Post(cloudVM: vm, isGlutenFree: false),
+                        isActive: $goToPost
+                    ) {
+                        EmptyView()
+                    }
+
 
                     
                 }}
