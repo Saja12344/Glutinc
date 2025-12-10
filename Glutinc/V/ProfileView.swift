@@ -614,17 +614,16 @@ struct ProfileView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(
-                    destination: SettingsView(vm: vm)
-                       
-
-                ) {
-                    Image(systemName: "gearshape")
-                        .foregroundStyle(.black)
-                }
+                  ToolbarItem(placement: .navigationBarTrailing) {
+                   NavigationLink(
+                       destination:
+                            SettingsView(vm: vm)
+                                   .environment(\.layoutDirection, isAR ? .rightToLeft : .leftToRight) // ← NEW
+                   ) {
+                         Image(systemName: "gearshape").foregroundStyle(.black)//.glassEffect()
+                  }
+                 }
             }
-        }
     }
 }
 

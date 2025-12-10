@@ -31,7 +31,7 @@ struct MainTabContainer: View {
                     CameraView(selectedTab: $selectedTab)   // ✅ مع زر رجوع
 
                 case .profile:
-                    ProfileView(vm: userVM)
+                    NavigationStack { ProfileView(vm: userVM) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

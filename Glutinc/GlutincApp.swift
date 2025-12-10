@@ -15,7 +15,8 @@ struct GlutincApp: App {
             // TODO: Replace with your primary view (e.g., CameraView or a dedicated scanner view)
             // The referenced GlutenScannerView is not included in the provided files.
              
-                     MainTabContainer()
+                     //MainTabContainer()
+            Splash()
                  
         }
     }

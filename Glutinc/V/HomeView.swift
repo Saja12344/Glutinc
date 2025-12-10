@@ -864,9 +864,35 @@ struct HomeView: View {
             ZStack {
 
                 if colorScheme == .dark {
-                    Color.black.ignoresSafeArea()
+                    // دارك مود
+                    Color("BackgroundMain")
+                        .ignoresSafeArea()
+
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color("GradientEnd"),                       // الأزرق
+                            Color("GradientStart").opacity(0.10),      // أبيض خفيييف
+                            .clear
+                        ]),
+                        center: .topTrailing,
+                        startRadius: 40,
+                        endRadius: 600
+                    )
+                    .opacity(0.9)
+                    .ignoresSafeArea()
+
                 } else {
-                    Color.white.ignoresSafeArea()
+                    // لايت مود
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color("GradientEnd"),    // الأزرق من الزاوية
+                            Color("GradientMiddle")  // الأخضر يغطي الباقي
+                        ]),
+                        center: .topTrailing,
+                        startRadius: 40,
+                        endRadius: 600
+                    )
+                    .ignoresSafeArea()
                 }
 
                 VStack {
@@ -981,4 +1007,7 @@ private struct PostRow: View {
                 .fill(.ultraThinMaterial)
         )
     }
+}
+#Preview {
+    HomeView()
 }

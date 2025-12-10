@@ -32,7 +32,7 @@ struct SettingsView: View {
                     // Notifications toggle inline
                     HStack {
                         Label(NSLocalizedString("Notifications", comment: ""), systemImage: "bell")
-                            .foregroundStyle(.white)
+                           // .foregroundStyle(.white)
                         Spacer()
                         Toggle("", isOn: $vm.user.notificationsEnabled)
                             .labelsHidden()
@@ -59,16 +59,16 @@ struct SettingsView: View {
                     PhotosPicker(selection: $pickerItem, matching: .images) {
                         HStack(spacing: 14) {
                             Image(systemName: "camera.circle")
-                                .foregroundStyle(.white)
+                              //  .foregroundStyle(.white)
                                 .font(.system(size: 18, weight: .medium))
 
                             Text(NSLocalizedString("Edit Profile Photo", comment: ""))
-                                .foregroundStyle(.white)
+                               // .foregroundStyle(.white)
 
                             Spacer()
 
                             Image(systemName: "chevron.forward")
-                                .foregroundStyle(.white.opacity(0.5))
+                                //.foregroundStyle(.white.opacity(0.5))
                                 .flipsForRightToLeftLayoutDirection(true) // ← NEW
                         }
                         .padding()
@@ -153,11 +153,11 @@ struct SettingsView: View {
                         VStack(spacing: 20) {
                             Text(NSLocalizedString("Edit Name", comment: ""))
                                 .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(.white)
+                               // .foregroundStyle(.white)
 
                             TextField(NSLocalizedString("Your name", comment: ""), text: $nameDraft)
                                 .padding()
-                                .background(Color.white.opacity(0.15))
+                               // .background(Color.white.opacity(0.15))
                                 .cornerRadius(12)
                                 .foregroundStyle(.white)
                                 .tint(.white)
