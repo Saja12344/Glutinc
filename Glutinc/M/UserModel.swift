@@ -40,6 +40,7 @@ final class UserCloudVM: ObservableObject {
     @Published var selectedCategory: String = ""
     @Published var categories = ["Others","Meat& Alternatives","Drinks", "Grains & Flours","Dairy"]
     @Published var products: [ProductModel] = []
+    @Published var hasLoadedProducts = false
 
 
     private let userDefaultsKey = "loggedInUserId"
@@ -48,62 +49,39 @@ final class UserCloudVM: ObservableObject {
     // ✅ عند تشغيل التطبيق
     init() {
         loadUserSession()
+        CKContainer(identifier: "iCloud.com.sga.Glutinc").accountStatus { status, error in
+               DispatchQueue.main.async {
+                   print("☁️ iCloud status:", status.rawValue)
+
+                   if let error = error {
+                       print("☁️ iCloud error:", error.localizedDescription)
+                   }
+               }
+           }
+       }
+
+    func uploadProduct(_ product: ProductModel, completion: @escaping (Bool) -> Void) {
+
+        ck.saveProduct(product) { success in
+            if success {
+                self.products.insert(product, at: 0)
+                print("📌 Products count:", self.products.count)
+            }
+            completion(success)
+        }
     }
 
-    func saveToCloud(_ product: ProductModel) {
+    func loadProductsFromCloud() {
+        ck.fetchProducts { fetched in
+            print("📥 Cloud fetch count:", fetched.count)
 
-        let record = CKRecord(recordType: "Product")
-
-        record["productName"] = product.productName as CKRecordValue
-        record["username"] = product.username as CKRecordValue
-        record["rating"] = product.rating as CKRecordValue
-        record["isGlutenFree"] = product.isGlutenFree as CKRecordValue
-        record["price"] = product.price as CKRecordValue
-        record["location"] = product.location as CKRecordValue
-        record["category"] = product.category as CKRecordValue
-
-        // لو تبغي تربط المنتج بصاحبه:
-        if !user.appleID.isEmpty {
-            record["ownerAppleID"] = user.appleID as CKRecordValue
-        }
-
-        let database = CKContainer.default().publicCloudDatabase
-
-        database.save(record) { _, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    self.errorMessage = error.localizedDescription
-                    print("❌ فشل حفظ المنتج:", error.localizedDescription)
-                } else {
-                    print("✅ تم حفظ المنتج في CloudKit بنجاح")
-                }
+            if !fetched.isEmpty {
+                self.products = fetched
+            } else {
+                print("⚠️ Fetch returned 0 – keeping existing data")
             }
         }
     }
-    func uploadProduct(_ product: ProductModel) {
-        products.insert(product, at: 0)
-         saveToCloud(product)
-
-    }
-    func loadProducts() async {
-        // مثال بيانات وهمية مؤقتة
-        let demo = ProductModel(
-            id: UUID().uuidString,
-            productName: "Chocolate Cookie",
-            username: "sweet.bakes",
-            rating: 4.2,
-            isGlutenFree: false,
-            price: "12 SAR",
-            location: "Riyadh",
-            category: "Others"
-        )
-
-        if products.isEmpty {
-            products = [demo]
-        }
-    }
-
-
 
     // MARK: - ✅ تسجيل الدخول بـ Apple + CloudKit
     func handleSignIn(result: Result<ASAuthorization, Error>) {

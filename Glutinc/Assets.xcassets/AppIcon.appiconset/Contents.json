@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "glutinc icon.png",
+      "filename" : "Grouplight.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "glutinc icon 1.png",
+      "filename" : "Groupdark.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

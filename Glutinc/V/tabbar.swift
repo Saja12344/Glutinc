@@ -1,100 +1,70 @@
-//
-//  tabbar.swift
-//  Glutinc
-//
-//  Created by saja khalid on 17/06/1447 AH.
-//
 
 import SwiftUI
-// ✅ تابّات التاب بار
+import UIKit   // مهم عشان UIColor و UIBlurEffect
+
 enum HomeTab {
     case wheat
     case scan
     case profile
 }
+
 struct MainTabContainer: View {
-
-    @State private var selectedTab: HomeTab = .wheat
+//    @State private var selectedTab: HomeTab = .scan
     @StateObject var userVM = UserCloudVM()
+    @State private var selectedTab: HomeTab = .wheat
+
+
+    init() {
+        let appearance = UITabBarAppearance()
+        
+        // نبدأ بخلفية افتراضية
+        appearance.configureWithDefaultBackground()
+        
+        // نحط البلور (قلاس إفكت)
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        
+        // نضيف لون خفيف فوق البلور (اختياري)
+        appearance.backgroundColor = UIColor.btn.withAlphaComponent(0.12)
+
+        UITabBar.appearance().standardAppearance = appearance
+        
+        // مهم للـ scroll edge في iOS 15+
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+    }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        TabView (selection: $selectedTab){
+            // Home
+            NavigationStack {
+                      HomeView()
+                  }
+                  .tabItem {
+                      Image("wheat")
+                          .renderingMode(.template)
+                  }
+                  .tag(HomeTab.wheat)
 
-            // ✅ المحتوى حسب التاب
-            Group {
-                switch selectedTab {
+                  // 📷 Scan
+                  CameraView(
+                    cloudVM: userVM,
+                    selectedTab: $selectedTab
+                  )
+                  .toolbar(.hidden, for: .tabBar) 
+                  .tabItem {
+                      Image(systemName: "camera")
+                  }
+                  .tag(HomeTab.scan)
 
-                case .wheat:
-                    HomeView()
-
-                case .scan:
-                    CameraView(selectedTab: $selectedTab)   // ✅ مع زر رجوع
-
-                case .profile:
-                    NavigationStack { ProfileView(vm: userVM) }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // ✅ إخفاء التاب بار داخل الكاميرا
-            if selectedTab != .scan {
-                GlassTabBar(selectedTab: $selectedTab)
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 24)
-                    .transition(.move(edge: .bottom))
-            }
-        }
-    }
-}
-// ✅ التاب بار القلاسي
-struct GlassTabBar: View {
-
-    @Binding var selectedTab: HomeTab
-
-    var body: some View {
-        HStack(spacing: 0) {
-            tabButton(.wheat, imageName: "wheat")
-            tabButton(.scan, imageName: "scan")
-            tabButton(.profile, imageName: "profile")
-        }
-        .padding(6)
-        .background(
-            RoundedRectangle(cornerRadius: 30)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 30)
-                .stroke(Color.white.opacity(0.7), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 8)
-        .frame(width: 260, height: 72)
+                  // 👤 Profile
+                  NavigationStack {
+                      ProfileView(vm: userVM)
+                  }
+                  .tabItem {
+                      Image(systemName: "person")
+                  }
+                  .tag(HomeTab.profile)
+              }        }
     }
 
-    private func tabButton(_ tab: HomeTab, imageName: String) -> some View {
-        Button {
-            selectedTab = tab
-        } label: {
-            ZStack {
-                if selectedTab == tab {
-                    RoundedRectangle(cornerRadius: 26)
-                        .fill(Color.white.opacity(0.95))
-                        .shadow(radius: 8)
-                        .padding(4)
-                }
-
-                Image(imageName)
-                    .resizable()
-                    .renderingMode(.template)
-                    .scaledToFit()
-                    .frame(width: 26, height: 26)
-                    .foregroundColor(
-                        selectedTab == tab
-                        ? Color("PrimaryBlue")
-                        : Color.primary.opacity(0.4)
-                    )
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .buttonStyle(.plain)
-    }
-}

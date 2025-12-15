@@ -8,8 +8,8 @@ struct CameraView: View {
     @State private var capturedImage: UIImage?
     @Environment(\.layoutDirection) var layoutDirection
     @State private var isFlashOn = false
+    @ObservedObject var cloudVM: UserCloudVM
     @Binding var selectedTab: HomeTab
-    @StateObject var cloudVM = UserCloudVM()
 
     var body: some View {
         NavigationView {
@@ -33,36 +33,37 @@ struct CameraView: View {
                     )
                 
                 VStack {
-                Button {
-                    selectedTab = .wheat   // ✅ رجوع مباشر للهوم
-                } label: {
-                    Image(systemName: "chevron.backward")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                }
+                    HStack(spacing: 12) {
 
-                Spacer()
-                    
-                    Spacer()
-                    VStack {
-                        // رسالة التنبيه
-                        Text("Note : Focus on the ingredient list for accurate results")
-                            .frame(width: 250, height: 60)
-                            .font(.system(size: 15, weight: .regular, design: .default))
+                        // 🔙 Back Button
+                        Button {
+                            selectedTab = .wheat
+                        } label: {
+                            Image(systemName: "chevron.backward")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
+                        }
+
+                        // 📝 Note Card
+                        Text("Note: Focus on the ingredient list for accurate results")
+                            .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
-                            .padding(8)
+                            .frame(height: 56)
+                            .padding(.horizontal, 18)
                             .background(
-                                ZStack {
-                                    Color.btn.opacity(0.3)
-                                        .blur(radius: 1)
-                                        .background(.ultraThinMaterial)
-                                }
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.btn.opacity(0.28))
+                                    .background(.ultraThinMaterial)
                             )
-                            .cornerRadius(16)
+                            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+
+                    }
+                    .padding(.horizontal, 16)
+
                         
                         Spacer()
                         FocusCornerBox()
@@ -116,59 +117,52 @@ struct CameraView: View {
                         .frame(maxWidth: .infinity)          // ✅ يمتد عرضيًا
                         
                         .background(
-                            ZStack {
-                                // ✅ بلير حقيقي
-                                Rectangle()
-                                    .fill(.ultraThinMaterial)
-                                
-                                // ✅ طبقة سوداء فوق البلير
-                                Color.black.opacity(0.45)
-                            }
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                        .fill(Color.white.opacity(0.06))
+                                )
                         )
                         //
                     }
-//                    .ignoresSafeArea(edges: .bottom) // ✅ تمتد لآخر الشاشة حتى مع الـ safe area
+                    .ignoresSafeArea(edges: .bottom) // ✅ تمتد لآخر الشاشة حتى مع الـ safe area
                     
-                    if let image = capturedImage {
-                        Color.black.opacity(0.25)
-                            .ignoresSafeArea()
-                            .allowsHitTesting(false)
+                if let image = capturedImage {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+
+                    VStack {
+                        Spacer()
+
+                        ResultView(
+                            vm: cloudVM,
+                            selectedTab: $selectedTab,
+                            capturedImage: $capturedImage,
+                            image: image,
+                            ingredients: cameraVM.glutenFound,
                         
-                        VStack {
-                            Spacer()   // ✅ هذا يضمن أن البداية من أسفل الشاشة
-                            
-                            ResultView(
-                                vm: cloudVM,
-                                capturedImage: $capturedImage,
-                                // ✅ الصحيح
-                                image: image,
-                                ingredients: cameraVM.glutenFound,  // ✅ من الكاميرا
-                                status: cameraVM.status,            // ✅ من الكاميرا
-                               
-                                
-                                
-                            )
-//                            .ignoresSafeArea(edges: .bottom)
-                            .padding(.bottom, 90)
-
-
-                            .frame(
-                                height: cameraVM.glutenFound.isEmpty
-                                ? UIScreen.main.bounds.height * 0.55
-                                : UIScreen.main.bounds.height * 0.65
-                            )
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                            .shadow(radius: 12)
-                            .ignoresSafeArea(edges: .bottom)
-                        }
-                        .transition(.move(edge: .bottom))
-                        .animation(.easeInOut, value: capturedImage)
+                            status: cameraVM.status,
+                        )
+                        .frame(
+                            height: cameraVM.glutenFound.isEmpty
+                            ? UIScreen.main.bounds.height * 0.55
+                            : UIScreen.main.bounds.height * 0.65
+                        )
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                        .shadow(radius: 12)
+                        .ignoresSafeArea(edges: .bottom)
+                    }
+                    .transition(.move(edge: .bottom))
+                    .animation(.easeInOut, value: capturedImage)
+                }
                     }
                     
                     
                 }
-            }
+            
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker { image in
                     // صورة من الألبوم
@@ -223,14 +217,14 @@ struct CameraView: View {
             .stroke(Color.yellow, lineWidth: 4)
         }
     }
-}
 
 
-// 👇 لازم يكون الـ Preview خارج struct CameraView
-struct CameraView_Previews: PreviewProvider {
-    static var previews: some View {
-        CameraView(
-            selectedTab: .constant(.scan)
-        )
-    }
-}
+
+//// 👇 لازم يكون الـ Preview خارج struct CameraView
+//struct CameraView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        CameraView(
+//            selectedTab: .constant(.scan)
+//        )
+//    }
+//}

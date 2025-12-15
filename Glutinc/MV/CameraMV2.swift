@@ -170,17 +170,38 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
     let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
     private var videoDevice: AVCaptureDevice?   // ✅ مهم جدًا للفوكس
+//    var status: ResultView.GlutenStatus {
+//        if glutenFound.contains(where: { glutenStrict.contains($0.name) }) {
+//            return .contains
+//        } else if glutenFound.contains(where: { glutenPossible.contains($0.name) }) {
+//            return .possible
+//        } else if glutenFound.isEmpty {
+//            return .safe
+//        } else {
+//            return .unknown
+//        }
+//    }
     var status: ResultView.GlutenStatus {
-        if glutenFound.contains(where: { glutenStrict.contains($0.name) }) {
+
+        let strictNames = glutenStrict + glutenStrictAR
+        let possibleNames = glutenPossible + glutenPossibleAR
+
+        if glutenFound.contains(where: { strictNames.contains($0.name) }) {
             return .contains
-        } else if glutenFound.contains(where: { glutenPossible.contains($0.name) }) {
-            return .possible
-        } else if glutenFound.isEmpty {
-            return .safe
-        } else {
-            return .unknown
         }
+
+        if glutenFound.contains(where: { possibleNames.contains($0.name) }) {
+            return .possible
+        }
+
+        // ⭐ OCR قرأ نص واضح
+        if extractedText.count > 20 {
+            return .safe
+        }
+
+        return .unknown
     }
+
     // ✅ كلمات الغلوتين
     private let glutenStrict = [
         // Grains & Flours
@@ -660,47 +681,111 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
         glutenPossible + glutenPossibleAR
     }
 
+//    private func detectGluten(in text: String) {
+//        let lower = text.lowercased()
+//
+//        var found: [GlutenIngredient] = []
+//        var matchedKeywords = Set<String>() // ✅ لمنع التكرار
+//        var didMatchAnything = false        // ✅ لمعرفة هل تعرفنا على أي مكوّن
+//
+//        // ✅ أولاً: Strict (خطر)
+//        for keyword in allStrict {
+//            if lower.contains(keyword.lowercased()) {
+//                didMatchAnything = true
+//                if !matchedKeywords.contains(keyword) {
+//                    matchedKeywords.insert(keyword)
+//                    found.append(GlutenIngredient(name: keyword))
+//                }
+//            }
+//        }
+//
+//        // ✅ ثانياً: Possible (محتمل)
+//        for keyword in allPossible {
+//            if lower.contains(keyword.lowercased()) {
+//                didMatchAnything = true
+//                if !matchedKeywords.contains(keyword) {
+//                    matchedKeywords.insert(keyword)
+//                    found.append(GlutenIngredient(name: keyword))
+//                }
+//            }
+//        }
+//
+//        // ✅ ثالثاً: تحديد النتيجة النهائية
+////        if found.isEmpty {
+////            if didMatchAnything {
+////                // تم التعرف على كلمات لكن ليست خطرة
+////                found.append(GlutenIngredient(name: "Safe"))
+////            } else {
+////                // لم يتم التعرف على أي مكونات معروفة
+////                found.append(GlutenIngredient(name: "Unknown ❔"))
+////            }
+////        }
+////
+////        glutenFound = found
+//        if found.isEmpty {
+//            // إذا في كلمات من سياق المكونات → نقول Unknown
+//            if containsFoodContext {
+//                found.append(GlutenIngredient(name: "Unknown ❔"))
+//            } else {
+//                // بدون مكونات: نخلي القائمة فاضية
+//                found = []
+//            }
+//        }
+//
+//    }
     private func detectGluten(in text: String) {
-        let lower = text.lowercased()
+
+        let enText = normalizeEnglish(text)
+        let arText = normalizeArabic(text)
 
         var found: [GlutenIngredient] = []
-        var matchedKeywords = Set<String>() // ✅ لمنع التكرار
-        var didMatchAnything = false        // ✅ لمعرفة هل تعرفنا على أي مكوّن
+        var matched = Set<String>()
 
-        // ✅ أولاً: Strict (خطر)
-        for keyword in allStrict {
-            if lower.contains(keyword.lowercased()) {
-                didMatchAnything = true
-                if !matchedKeywords.contains(keyword) {
-                    matchedKeywords.insert(keyword)
-                    found.append(GlutenIngredient(name: keyword))
-                }
+        // 🔴 Strict
+        for keyword in glutenStrict {
+            if enText.contains(keyword) {
+                matched.insert(keyword)
+                found.append(GlutenIngredient(name: keyword))
             }
         }
 
-        // ✅ ثانياً: Possible (محتمل)
-        for keyword in allPossible {
-            if lower.contains(keyword.lowercased()) {
-                didMatchAnything = true
-                if !matchedKeywords.contains(keyword) {
-                    matchedKeywords.insert(keyword)
-                    found.append(GlutenIngredient(name: keyword))
-                }
+        for keyword in glutenStrictAR {
+            if arText.contains(normalizeArabic(keyword)) {
+                matched.insert(keyword)
+                found.append(GlutenIngredient(name: keyword))
             }
         }
 
-        // ✅ ثالثاً: تحديد النتيجة النهائية
-        if found.isEmpty {
-            if didMatchAnything {
-                // تم التعرف على كلمات لكن ليست خطرة
-                found.append(GlutenIngredient(name: "Safe"))
-            } else {
-                // لم يتم التعرف على أي مكونات معروفة
-                found.append(GlutenIngredient(name: "Unknown ❔"))
+        // 🟠 Possible
+        for keyword in glutenPossible {
+            if enText.contains(keyword) {
+                matched.insert(keyword)
+                found.append(GlutenIngredient(name: keyword))
             }
         }
 
+        for keyword in glutenPossibleAR {
+            if arText.contains(normalizeArabic(keyword)) {
+                matched.insert(keyword)
+                found.append(GlutenIngredient(name: keyword))
+            }
+        }
+
+        // ✅ نحفظ فقط المكونات
         glutenFound = found
+    }
+    private func normalizeArabic(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "[ًٌٍَُِّْ]", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "أ", with: "ا")
+            .replacingOccurrences(of: "إ", with: "ا")
+            .replacingOccurrences(of: "آ", with: "ا")
+            .replacingOccurrences(of: "ى", with: "ي")
+            .replacingOccurrences(of: "ة", with: "ه")
+    }
+
+    private func normalizeEnglish(_ text: String) -> String {
+        text.lowercased()
     }
 
     private func similarity(_ s1: String, _ s2: String) -> Double {

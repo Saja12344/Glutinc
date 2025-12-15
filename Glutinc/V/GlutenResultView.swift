@@ -1,31 +1,22 @@
-////
-////  GlutenResultView.swift
-////  Glutinc
-////
-////  Created by saja khalid on 11/06/1447 AH.
-////
 
-//
 import SwiftUI
 
-
 struct ResultView: View {
+
     @Environment(\.layoutDirection) var layoutDirection
     @Environment(\.colorScheme) var colorScheme
+
     @State private var goToPost = false
 
     @ObservedObject var vm: UserCloudVM
-    @Binding var capturedImage: UIImage?   // ✅ هنا ثاني
+    @Binding var selectedTab: HomeTab
+//    let isGlutenFree: Bool
+    @Binding var capturedImage: UIImage?
 
-    let image: UIImage                     // ✅ بعدها image
+    let image: UIImage
     let ingredients: [GlutenIngredient]
     let status: GlutenStatus
 
-    
-
-    var containsGluten: Bool {
-        !ingredients.isEmpty
-    }
     enum GlutenStatus {
         case contains
         case possible
@@ -33,258 +24,202 @@ struct ResultView: View {
         case unknown
     }
 
-
-
-
     var body: some View {
         VStack(spacing: 12) {
 
+            // ❌ زر الإغلاق
             HStack {
-                if layoutDirection == .rightToLeft {
-                    Spacer()
-                }
+                // RTL support
+                if layoutDirection == .rightToLeft { Spacer() }
 
                 Button {
-                    withAnimation {
+                    withAnimation(.easeInOut(duration: 0.25)) {
                         capturedImage = nil
                     }
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(colorScheme == .light ? Color.black : Color.white)
-                        .frame(width: 38, height: 38)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 44, height: 44)
                         .background(
                             Circle()
-                                .fill(.ultraThickMaterial.opacity(0.7))
-                                .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 4)
+                                .fill(.ultraThinMaterial)
                         )
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                 }
+                .buttonStyle(.plain)
 
-
-
-                if layoutDirection != .rightToLeft {
-                    Spacer()
-                }
+                if layoutDirection != .rightToLeft { Spacer() }
             }
-            .padding(.horizontal)
-            .padding(.top, 22)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 16)
+            .padding(.top, 20)
 
 
-
-
-            // ✅ المحتوى
+            // 📦 المحتوى
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     
-                    // ✅ الصورة
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 180)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                        .cornerRadius(16)
-                    
-                    //                    // ✅ العنوان
-                    //                    Text(containsGluten ? "Contains Gluten ⚠️" : "Gluten-Free ✅")
-                    //                        .font(.system(size: 24, weight: .bold))
-                    //                        .foregroundColor(containsGluten ? .rd : .grn)
-                    //
-                    //                    // ✅ الوصف
-                    //                    Text(containsGluten
-                    //                         ? "This product contains ingredients associated with gluten."
-                    //                         : "No gluten-related ingredients were detected.")
-                    //                        .font(.subheadline)
-                    //                        .foregroundColor(.secondary)
-                    //                        .multilineTextAlignment(.center)
-                    //
-                    //                    // ✅ المكونات
-                    //                    if containsGluten {
-                    //                        VStack(alignment: .leading, spacing: 12) {
-                    //                            Text("Detected Gluten Ingredients")
-                    //                                .font(.headline)
-                    //                                .foregroundColor(.rd.opacity(0.85))
-                    //
-                    //                            ForEach(uniqueIngredients.prefix(4), id: \.self) { name in
-                    //                                HStack {
-                    //                                    Circle()
-                    //                                        .fill(Color.rd)
-                    //                                        .frame(width: 10, height: 10)
-                    //
-                    //                                    Text(name.capitalized)
-                    //                                }
-                    //                            }
-                    //                        }
-                    //                        .padding()
-                    //                        .background(Color.red.opacity(0.08))
-                    //                        .cornerRadius(14)
+                    ZStack(alignment: .bottomLeading) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 220)
+                            .frame(maxWidth: .infinity)
+                            .clipped()
+
+                        // Overlay خفيف
+                        LinearGradient(
+                            colors: [.black.opacity(0.45), .clear],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                    }
+                    .cornerRadius(18)
+                    .padding(.horizontal)
+
+                    // 🧠 النتيجة
                     VStack(spacing: 12) {
-                        
-                        // ✅ العنوان الرئيسي
-                        Text(
-                            status == .contains ? "Contains Gluten ❌" :
-                                status == .possible ? "May Contain Gluten ⚠️" :
-                                status == .safe ? "Gluten-Free ✅" :
-                                "Unknown ❓"
-                        )
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(
-                            status == .contains ? .rd :
-                                status == .possible ? .orng :
-                                status == .safe ? .grn :
-                                    .gry
-                        )
-                        
-                        // ✅ الوصف
-                        Text(
-                            status == .contains
-                            ? "This product contains ingredients associated with gluten."
-                            : status == .possible
-                            ? "This product may contain gluten due to uncertain ingredients."
-                            : status == .safe
-                            ? "No gluten-related ingredients were detected."
-                            : "The ingredients could not be identified with certainty."
-                        )
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        
-                        // ✅ صندوق المكونات (يظهر فقط في حالتين)
+
+                        Text(titleText)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(titleColor)
+
                         if status == .contains || status == .possible {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(status == .contains
-                                     ? "Detected Gluten Ingredients"
-                                     : "Possibly Risky Ingredients")
-                                .font(.headline)
-                                .foregroundColor(
-                                    status == .contains ? .rd.opacity(0.85) : .orng
-                                )
-                                
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(listTitle)
+                                    .font(.headline)
+                                    .foregroundColor(titleColor)
+
                                 ForEach(uniqueIngredients.prefix(4), id: \.self) { name in
                                     HStack {
                                         Circle()
-                                            .fill(status == .contains ? Color.rd : Color.orng)
-                                            .frame(width: 10, height: 10)
-                                        
+                                            .fill(titleColor)
+                                            .frame(width: 8, height: 8)
+
                                         Text(name.capitalized)
                                     }
                                 }
                             }
                             .padding()
-                            .background(
-                                status == .contains
-                                ? Color.rd.opacity(0.08)
-                                : Color.orng.opacity(0.08)
-                            )
+                            .background(titleColor.opacity(0.08))
                             .cornerRadius(14)
                         }
-                        
-                        // ✅ رسالة تطمين للحالات الآمنة
+
                         if status == .safe {
                             Text("This product is safe for a gluten-free diet.")
                                 .font(.footnote)
                                 .foregroundColor(.grn.opacity(0.85))
                         }
-                        
-                        // ✅ رسالة تحذير للحالة غير المعروفة
+
                         if status == .unknown {
                             Text("Please double-check the ingredients manually.")
                                 .font(.footnote)
                                 .foregroundColor(.gry)
                         }
                     }
+                    .padding()
+//                    .background(.ultraThinMaterial)
+//                    .clipShape(RoundedRectangle(cornerRadius: 20))
+
+                    // ▶️ Next (ما يظهر في unknown)
+                    if status != .unknown {
+                        Button {
+                            goToPost = true
+                        } label: {
+                            Text("Next")
+                                .font(.headline)
+                                .frame(width: 150, height: 52)
+                                .foregroundStyle(Color.primary) // أبيض دارك / أسود لايت
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(.ultraThinMaterial)   // قلاسي
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                        )
+                                )
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
                     
-//                    NavigationLink {
-//                        Post(cloudVM: vm, isGlutenFree: false)
-//                    } label: {
-//                        Text("Next")
-//                            .frame(width: 180, height: 42)
-//                            .fontWeight(.bold)
-//                            .foregroundStyle(Color(uiColor: .label))
-//                            .glassEffect(.clear.tint(Color.btn.opacity(0.9)))
-//                            .clipShape(RoundedRectangle(cornerRadius: 14))
-//                    }
-                    Button {
-                        goToPost = true
-                    } label: {
-                        Text("Next")
-                            .frame(width: 180, height: 42)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color(uiColor: .label))
-                            .glassEffect(.clear.tint(Color.btn.opacity(0.9)))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+
+
+                        NavigationLink(
+                            destination: Post(
+                                cloudVM: vm,
+                                selectedTab: $selectedTab,
+                                isGlutenFree: status == .safe
+                            ),
+                            isActive: $goToPost
+                        ) {
+                            EmptyView()
+                        }
                     }
 
-                    NavigationLink(
-                        destination: Post(cloudVM: vm, isGlutenFree: false),
-                        isActive: $goToPost
-                    ) {
-                        EmptyView()
+
+                        NavigationLink(
+                            destination: Post(
+                                cloudVM: vm,
+                                selectedTab: $selectedTab,   // ✅ هذا هو الحل
+                                isGlutenFree: status == .safe
+                            ),
+                            isActive: $goToPost
+                        ) {
+                            EmptyView()
+                        }
                     }
-
-
-                    
-                }}
-
-        }
+                }
+            }
+        
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28))
     }
+
+    // MARK: - Helpers
 
     var uniqueIngredients: [String] {
-        Array(Set(ingredients.map { $0.name }))
+        Array(Set(ingredients.map { $0.name.lowercased() }))
+    }
+
+    var titleText: String {
+        switch status {
+        case .contains: return "Contains Gluten ❌"
+        case .possible: return "May Contain Gluten ⚠️"
+        case .safe: return "Gluten-Free ✅"
+        case .unknown: return "Unknown ❓"
+        }
+    }
+
+    var descriptionText: String {
+        switch status {
+        case .contains:
+            return "This product contains ingredients associated with gluten."
+        case .possible:
+            return "This product may contain gluten due to uncertain ingredients."
+        case .safe:
+            return "No gluten-related ingredients were detected."
+        case .unknown:
+            return "The ingredients could not be identified with certainty."
+        }
+    }
+
+    var listTitle: String {
+        status == .contains
+        ? "Detected Gluten Ingredients"
+        : "Possibly Risky Ingredients"
+    }
+
+    var titleColor: Color {
+        switch status {
+        case .contains: return .rd
+        case .possible: return .orng
+        case .safe: return .grn
+        case .unknown: return .gry
+        }
     }
 }
-//#Preview("Contains Gluten") {
-//    ResultView(
-//        image: UIImage(systemName: "photo")!,
-//        ingredients: [
-//            GlutenIngredient(name: "wheat"),
-//            GlutenIngredient(name: "barley"),
-//            GlutenIngredient(name: "malt")
-//        ],
-//        status: .contains,
-//        onClose: {},
-//        onPost: {},
-//    )
-//}
-//
-//#Preview("Possible Gluten") {
-//    ResultView(
-//        image: UIImage(systemName: "photo")!,
-//        ingredients: [
-//            GlutenIngredient(name: "oats"),
-//            GlutenIngredient(name: "soy sauce"),
-//            GlutenIngredient(name: "modified starch")
-//        ],
-//        status: .possible,
-//        onClose: {},
-//        onPost: {},
-//    )
-//}
-//
-//#Preview("Safe") {
-//    ResultView(
-//        image: UIImage(systemName: "photo")!,
-//        ingredients: [],
-//        status: .safe,
-//        onClose: {},
-//        onPost: {},
-//    )
-//}
-//#Preview("Unknown") {
-//    ResultView(
-//        image: UIImage(systemName: "photo")!,
-//        ingredients: [
-//            GlutenIngredient(name: "sodium bicarbonate"),
-//            GlutenIngredient(name: "citric acid"),
-//            GlutenIngredient(name: "water")
-//        ],
-//        status: .unknown,
-//        onClose: {},
-//        onPost: {}
-//    )
-//}
-
-

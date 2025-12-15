@@ -10,15 +10,19 @@ import SwiftUI
 // App entry point. Presents the main view when the app launches.
 @main
 struct GlutincApp: App {
+    @StateObject var cloudVM = UserCloudVM()
     var body: some Scene {
         WindowGroup {
             // TODO: Replace with your primary view (e.g., CameraView or a dedicated scanner view)
             // The referenced GlutenScannerView is not included in the provided files.
              
                      //MainTabContainer()
+           
             Splash()
-                 
-        }
-    }
-}
+                .environmentObject(cloudVM)
+                    }
+                }
+            }
+
+  
 

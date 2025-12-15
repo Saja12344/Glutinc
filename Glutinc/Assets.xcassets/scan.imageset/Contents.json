@@ -2,16 +2,196 @@
   "images" : [
     {
       "filename" : "SCAN2.png",
-      "idiom" : "universal",
-      "scale" : "1x"
+      "idiom" : "universal"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "idiom" : "universal"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "idiom" : "universal"
+    },
+    {
+      "height-class" : "regular",
+      "idiom" : "universal"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "universal"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "universal"
     },
     {
       "idiom" : "universal",
-      "scale" : "2x"
+      "width-class" : "regular"
     },
     {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
       "idiom" : "universal",
-      "scale" : "3x"
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "idiom" : "universal",
+      "width-class" : "regular"
+    },
+    {
+      "height-class" : "regular",
+      "idiom" : "universal",
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "universal",
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "universal",
+      "width-class" : "regular"
+    },
+    {
+      "idiom" : "iphone"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "idiom" : "iphone"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "idiom" : "iphone"
+    },
+    {
+      "height-class" : "regular",
+      "idiom" : "iphone"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "iphone"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "iphone"
+    },
+    {
+      "idiom" : "iphone",
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "idiom" : "iphone",
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "idiom" : "iphone",
+      "width-class" : "regular"
+    },
+    {
+      "height-class" : "regular",
+      "idiom" : "iphone",
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "iphone",
+      "width-class" : "regular"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "height-class" : "regular",
+      "idiom" : "iphone",
+      "width-class" : "regular"
     }
   ],
   "info" : {

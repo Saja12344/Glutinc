@@ -14,11 +14,11 @@ struct User {
    
 }
 
-struct Productm{
-    let rating: Int
-    var productPrice: Int
-    var selectedCategory: String?
-    var location: String?
-    
-    var categories = ["Grains & Flours ","Dairy", "Drinks", " Meat& Alternatives", "Others"]
-}
+//struct Productm{
+//    let rating: Int
+//    var productPrice: Int
+//    var selectedCategory: String?
+//    var location: String?
+//    
+//    var categories = ["Grains & Flours ","Dairy", "Drinks", " Meat& Alternatives", "Others"]
+//}
