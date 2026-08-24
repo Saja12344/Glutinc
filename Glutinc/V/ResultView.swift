@@ -151,7 +151,6 @@ struct ResultView: View {
 
                         NavigationLink(
                             destination: Post(
-                                cloudVM: vm,
                                 selectedTab: $selectedTab,
                                 isGlutenFree: status == .safe
                             ),
@@ -164,7 +163,6 @@ struct ResultView: View {
 
                         NavigationLink(
                             destination: Post(
-                                cloudVM: vm,
                                 selectedTab: $selectedTab,   // ✅ هذا هو الحل
                                 isGlutenFree: status == .safe
                             ),
