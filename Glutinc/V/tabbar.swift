@@ -59,7 +59,7 @@ struct MainTabContainer: View {
 
                   // 👤 Profile
                   NavigationStack {
-                      ProfileView(vm: userVM)
+                      ProfileView()
                   }
                   .tabItem {
                       Image(systemName: "person")

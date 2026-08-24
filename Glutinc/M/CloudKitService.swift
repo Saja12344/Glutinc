@@ -7,72 +7,119 @@ final class CloudKitService {
     private let container = CKContainer(identifier: "iCloud.com.sga.Glutinc")
     
     private let publicDB: CKDatabase
+    private let privateDB: CKDatabase
+
 
     init() {
-        self.publicDB = container.publicCloudDatabase
+        self.publicDB  = container.publicCloudDatabase
+        self.privateDB = container.privateCloudDatabase
     }
 
     // MARK: - USER PROFILE (مسموح async لأنه Query بحقل appleID)
-
+//
+//    func fetchUserProfile(by appleID: String) async throws -> UserProfile? {
+//        let predicate = NSPredicate(format: "appleID == %@", appleID)
+//        let query = CKQuery(recordType: "UserProfile", predicate: predicate)
+//
+//        let operation = CKQueryOperation(query: query)
+//        operation.resultsLimit = 1
+//
+//        var profile: UserProfile?
+//
+//        operation.recordMatchedBlock = { _, result in
+//            if case let .success(record) = result {
+//                profile = UserProfile(record: record)
+//            }
+//        }
+//
+//        return try await withCheckedThrowingContinuation { cont in
+//            operation.queryResultBlock = { result in
+//                switch result {
+//                case .success:
+//                    cont.resume(returning: profile)
+//                case .failure(let error):
+//                    cont.resume(throwing: error)
+//                }
+//            }
+//            self.privateDB.add(operation)
+//        }
+//    }
     func fetchUserProfile(by appleID: String) async throws -> UserProfile? {
-        let predicate = NSPredicate(format: "appleID == %@", appleID)
-        let query = CKQuery(recordType: "UserProfile", predicate: predicate)
+        let recordID = CKRecord.ID(recordName: appleID)
 
-        let operation = CKQueryOperation(query: query)
-        operation.resultsLimit = 1
-
-        var profile: UserProfile?
-
-        operation.recordMatchedBlock = { _, result in
-            if case let .success(record) = result {
-                profile = UserProfile(record: record)
-            }
-        }
-
-        return try await withCheckedThrowingContinuation { cont in
-            operation.queryResultBlock = { result in
-                switch result {
-                case .success:
-                    cont.resume(returning: profile)
-                case .failure(let error):
-                    cont.resume(throwing: error)
-                }
-            }
-            self.publicDB.add(operation)
+        do {
+            let record = try await privateDB.record(for: recordID)
+            return UserProfile(record: record)
+        } catch {
+            return nil
         }
     }
 
+//
+//    func upsertUserProfile(_ profile: UserProfile) async throws {
+//        if let existing = try await fetchUserProfile(by: profile.appleID),
+//           let recordID = existing.recordID {
+//
+//            let record = try await publicDB.record(for: recordID)
+//            let updated = profile.toRecord(existing: record)
+//            _ = try await privateDB.save(updated)
+//
+//        } else {
+//            let newRecord = profile.toRecord()
+//            _ = try await privateDB.save(newRecord)
+//        }
+//    }
     func upsertUserProfile(_ profile: UserProfile) async throws {
-        if let existing = try await fetchUserProfile(by: profile.appleID),
-           let recordID = existing.recordID {
+        let recordID = CKRecord.ID(recordName: profile.appleID)
 
-            let record = try await publicDB.record(for: recordID)
-            let updated = profile.toRecord(existing: record)
-            _ = try await publicDB.save(updated)
-
-        } else {
-            let newRecord = profile.toRecord()
-            _ = try await publicDB.save(newRecord)
+        let record: CKRecord
+        do {
+            record = try await privateDB.record(for: recordID)
+        } catch {
+            record = CKRecord(recordType: CKTypes.userProfile, recordID: recordID)
         }
+
+        let updated = profile.toRecord(existing: record)
+        _ = try await privateDB.save(updated)
     }
+
     // MARK: - UPDATE USER NAME
+//    func updateUserName(appleID: String, newName: String) async throws {
+//
+//        guard let profile = try await fetchUserProfile(by: appleID),
+//              let recordID = profile.recordID else { return }
+//
+//        let record = try await publicDB.record(for: recordID)
+//        record["displayName"] = newName as CKRecordValue
+//        _ = try await privateDB.save(record)
+//    }
     func updateUserName(appleID: String, newName: String) async throws {
-
-        guard let profile = try await fetchUserProfile(by: appleID),
-              let recordID = profile.recordID else { return }
-
-        let record = try await publicDB.record(for: recordID)
+        let recordID = CKRecord.ID(recordName: appleID)
+        let record = try await privateDB.record(for: recordID)
         record["displayName"] = newName as CKRecordValue
-        _ = try await publicDB.save(record)
+        _ = try await privateDB.save(record)
     }
 
     // MARK: - UPDATE USER PHOTO
+//    func updateUserPhoto(appleID: String, image: UIImage?) async throws {
+//
+//        guard let profile = try await fetchUserProfile(by: appleID),
+//              let recordID = profile.recordID else { return }
+//
+//        let record = try await publicDB.record(for: recordID)
+//
+//        if let image,
+//           let url = try? TemporaryFile.write(image: image) {
+//            record["photo"] = CKAsset(fileURL: url)
+//        } else {
+//            record["photo"] = nil
+//        }
+//
+//        _ = try await publicDB.save(record)
+//    }
     func updateUserPhoto(appleID: String, image: UIImage?) async throws {
-
-        guard let profile = try await fetchUserProfile(by: appleID),
-              let recordID = profile.recordID else { return }
-
-        let record = try await publicDB.record(for: recordID)
+        let recordID = CKRecord.ID(recordName: appleID)
+        let record = try await privateDB.record(for: recordID)
 
         if let image,
            let url = try? TemporaryFile.write(image: image) {
@@ -81,8 +128,9 @@ final class CloudKitService {
             record["photo"] = nil
         }
 
-        _ = try await publicDB.save(record)
+        _ = try await privateDB.save(record)
     }
+
 
 
     // MARK: - SAVE PRODUCT
@@ -100,6 +148,10 @@ final class CloudKitService {
         record["location"]      = product.location as CKRecordValue
         record["category"]      = product.category as CKRecordValue
         record["createdAt"]     = Date() as CKRecordValue
+        record["ownerAppleID"] = product.ownerAppleID as CKRecordValue
+        if !product.detectedIngredients.isEmpty {
+            record["detectedIngredients"] = product.detectedIngredients as CKRecordValue
+        }
         // ⛔️ لا حفظ بدون صورة
         guard let url = try? TemporaryFile.write(image: product.image) else {
             print("❌ Failed to write product image")
@@ -109,6 +161,10 @@ final class CloudKitService {
 
         // ✅ صورة إجبارية
         record["image"] = CKAsset(fileURL: url)
+        // ✅ detected ingredients
+        if !product.detectedIngredients.isEmpty {
+            record["detectedIngredients"] = product.detectedIngredients as CKRecordValue
+        }
 
         if let notes = product.notes {
             record["notes"] = notes as CKRecordValue
@@ -131,90 +187,6 @@ final class CloudKitService {
         }
     }
 
-    // MARK: - FETCH PRODUCTS (بدون matching ❗️)
-//
-//    func fetchProducts(completion: @escaping ([ProductModel]) -> Void) {
-//
-//        let query = CKQuery(
-//            recordType: "Product",
-//            predicate: NSPredicate(value: true)
-//        )
-//
-//        let operation = CKQueryOperation(query: query)
-//        operation.resultsLimit = 100
-//
-//        var products: [ProductModel] = []
-//
-//        operation.recordMatchedBlock = { _, result in
-//            if case let .success(record) = result {
-//
-//                let product = ProductModel(
-//                    id: record["productID"] as? String ?? record.recordID.recordName,
-//                    productName: record["productName"] as? String ?? "",
-//                    username: record["username"] as? String ?? "",
-//                    rating: record["rating"] as? Double ?? 0,
-//                    isGlutenFree: record["isGlutenFree"] as? Bool ?? false,
-//                    price: record["price"] as? String ?? "",
-//                    location: record["location"] as? String ?? "",
-//                    category: record["category"] as? String ?? "",
-//                    notes: record["notes"] as? String,
-//                    productURL: record["productURL"] as? String
-//                )
-//
-//                products.append(product)
-//            }
-//        }
-//
-//        operation.queryResultBlock = { _ in
-//            DispatchQueue.main.async {
-//                print("✅ FINAL FETCH:", products.count)
-//                completion(products)
-//            }
-//        }
-//
-//        publicDB.add(operation)
-//    }
-//    func fetchProducts(completion: @escaping ([ProductModel]) -> Void) {
-//
-//        let query = CKQuery(
-//            recordType: "Product",
-//            predicate: NSPredicate(value: true)
-//        )
-//
-//        let operation = CKQueryOperation(query: query)
-//        operation.resultsLimit = 100
-//
-//        var products: [ProductModel] = []
-//
-//        operation.recordMatchedBlock = { _, result in
-//            if case let .success(record) = result {
-//
-//                let product = ProductModel(
-//                    id: record["productID"] as? String ?? record.recordID.recordName,
-//                    productName: record["productName"] as? String ?? "",
-//                    username: record["username"] as? String ?? "",
-//                    rating: record["rating"] as? Double ?? 0,
-//                    isGlutenFree: record["isGlutenFree"] as? Bool ?? false,
-//                    price: record["price"] as? String ?? "",
-//                    location: record["location"] as? String ?? "",
-//                    category: record["category"] as? String ?? "",
-//                    notes: record["notes"] as? String,
-//                    productURL: record["productURL"] as? String
-//                )
-//
-//                products.append(product)
-//            }
-//        }
-//
-//        operation.queryResultBlock = { _ in
-//            DispatchQueue.main.async {
-//                print("✅ FINAL FETCH:", products.count)
-//                completion(products)
-//            }
-//        }
-//
-//        publicDB.add(operation) // ✅ نفس الكونتينر
-//    }
     func fetchProducts(completion: @escaping ([ProductModel]) -> Void) {
 
         let query = CKQuery(
@@ -238,6 +210,8 @@ final class CloudKitService {
                         print("⚠️ Product skipped (no image)")
                         return nil
                     }
+                    let detectedIngredients =
+                        record["detectedIngredients"] as? [String] ?? []
 
                     return ProductModel(
                         id: record["productID"] as? String ?? record.recordID.recordName,
@@ -248,9 +222,11 @@ final class CloudKitService {
                         price: record["price"] as? String ?? "",
                         location: record["location"] as? String ?? "",
                         category: record["category"] as? String ?? "",
+                        detectedIngredients: detectedIngredients,
                         notes: record["notes"] as? String,
                         productURL: record["productURL"] as? String,
-                        image: image              // ✅ هذا كان ناقص
+                        image: image,
+                        ownerAppleID: record["ownerAppleID"] as? String ?? ""
                     )
                 }
 

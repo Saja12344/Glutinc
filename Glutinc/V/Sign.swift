@@ -10,44 +10,47 @@ import SwiftUI
 import AuthenticationServices
 
 struct Signup: View {
-    @StateObject private var viewModel = SignInViewModel()
-    
-    var body: some View {
-        
+
+        @EnvironmentObject var vm: UserCloudVM
+        @Environment(\.dismiss) private var dismiss
+
+        var body: some View {
+
             VStack(spacing: 30) {
-                
+
                 Text("Sign up for sharing with people")
                     .font(.system(size: 27, weight: .bold))
-                    .foregroundColor(.black)
-                
+
                 SignInWithAppleButton(
                     .signIn,
                     onRequest: { request in
                         request.requestedScopes = [.fullName, .email]
                     },
                     onCompletion: { result in
-                        viewModel.handleSignIn(result: result)
-                    }
+                        vm.handleSignIn(result: result)
+                        
+                        // ✅ 2) نقفل البوب-أب بعد نجاح التسجيل
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            dismiss()}}
                 )
                 .signInWithAppleButtonStyle(.black)
                 .frame(height: 50)
                 .cornerRadius(10)
-                
-        
-                // ⁠عرض الخطأ لو فيه مشكلة
-                if !viewModel.errorMessage.isEmpty {
-                    Text("Error: \(viewModel.errorMessage)")
+
+                if !vm.errorMessage.isEmpty {
+                    Text(vm.errorMessage)
                         .foregroundColor(.red)
                 }
             }
             .padding()
             .frame(width: 372, height: 329)
-            .background(Color("Colorback"))
+//            .background(Color("Colorback"))
             .cornerRadius(20)
             .multilineTextAlignment(.center)
+            
         }
-}
+    }
 
-#Preview {
-    Signup()
-}
+//#Preview {
+//    Signup()
+//}

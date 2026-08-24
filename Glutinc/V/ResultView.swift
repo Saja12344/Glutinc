@@ -145,31 +145,22 @@ struct ResultView: View {
                         }
                         .padding(.top, 8)
                         .padding(.bottom, 8)
-                    
-
-
-
+                        
+                        
+                        
+                        
                         NavigationLink(
                             destination: Post(
                                 selectedTab: $selectedTab,
-                                isGlutenFree: status == .safe
+                                isGlutenFree: status == .safe,
+                                detectedIngredientNames: detectedIngredientNames,   // ✅ الجديد
                             ),
                             isActive: $goToPost
                         ) {
                             EmptyView()
                         }
+                        
                     }
-
-
-                        NavigationLink(
-                            destination: Post(
-                                selectedTab: $selectedTab,   // ✅ هذا هو الحل
-                                isGlutenFree: status == .safe
-                            ),
-                            isActive: $goToPost
-                        ) {
-                            EmptyView()
-                        }
                     }
                 }
             }
@@ -179,7 +170,9 @@ struct ResultView: View {
     }
 
     // MARK: - Helpers
-
+    var detectedIngredientNames: [String] {
+          Array(Set(ingredients.map { $0.name.capitalized }))
+      }
     var uniqueIngredients: [String] {
         Array(Set(ingredients.map { $0.name.lowercased() }))
     }

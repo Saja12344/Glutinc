@@ -61,8 +61,8 @@ struct HomeView: View {
                 )
                 .ignoresSafeArea()
                 VStack {
-                   
-
+                    
+                    
                     // 🔹 Categories
                     
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -106,9 +106,15 @@ struct HomeView: View {
                     ScrollView {
                         LazyVStack(spacing: 14) {
                             
-                            ForEach(filteredProducts) { product in
-                                PostRow(post: product)
+                            ForEach(cloudVM.products) { post in
+                                NavigationLink {
+                                    ProductDetailView(post: post)
+                                } label: {
+                                    PostRow(post: post)
+                                }
+                                .buttonStyle(.plain)
                             }
+
                             
                             if filteredProducts.isEmpty {
                                 Text("No products yet")
@@ -120,88 +126,161 @@ struct HomeView: View {
                     }
                 }}
             .navigationTitle("Explore")
-                .searchable(text: $searchText, prompt: "Search")
-                .onAppear {
-                    print("🏠 Home appeared – loading products")
-                    cloudVM.loadProductsFromCloud()
-                }
+            .searchable(text: $searchText, prompt: "Search")
+            .onAppear {
+                print("🏠 Home appeared – loading products")
+                cloudVM.loadProductsFromCloud()
             }
         }
+    }
+    //    private struct PostRow: View {
+    //
+    //        let post: ProductModel
+    //
+    //        var body: some View {
+    //            VStack(alignment: .leading, spacing: 10) {
+    //
+    //                ZStack {
+    //                    Rectangle()
+    //                        .fill(.ultraThinMaterial)
+    //                          .overlay(
+    //                              RoundedRectangle(cornerRadius: 16)
+    //                                  .stroke(Color.white.opacity(0.25), lineWidth: 1)
+    //                          )                        .frame(height: 180)
+    //                        .cornerRadius(16)
+    //
+    //                    Image(uiImage: post.image)
+    //                        .resizable()
+    //                             .scaledToFill()
+    //                             .frame(height: 180)
+    //                             .clipped()
+    //                             .cornerRadius(16)
+    //
+    //                    HStack {
+    //                        Spacer()
+    //
+    //                        Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+    //                            .font(.caption2)
+    //                            .padding(.horizontal, )
+    //                            .padding(.vertical, 4)
+    //                            .background(post.isGlutenFree ? .grn : .rd)
+    //                            .cornerRadius(8)
+    //                            .foregroundColor(.primary)
+    //
+    //                            .padding(.top,160)
+    //                    }
+    //                }
+    //
+    //                Text(post.productName)
+    //                    .font(.headline)
+    //
+    //                HStack {
+    //                    Text("@\(post.username)")
+    //                        .font(.subheadline)
+    //                        .foregroundColor(.secondary)
+    //
+    //                    Spacer()
+    //
+    //                    HStack(spacing: 4) {
+    //                        Image(systemName: "star.fill")
+    //                            .font(.system(size: 12))
+    //                            .foregroundColor(.yellow)
+    //
+    //                        Text(String(format: "%.1f", post.rating))
+    //                            .font(.subheadline)
+    //                            .foregroundColor(.secondary)
+    //                    }
+    //                }
+    //
+    //                HStack {
+    //                    Text("💰 \(post.price)")
+    //                    Spacer()
+    //                    Text("📍 \(post.location)")
+    //                }
+    //                .font(.caption)
+    //                .foregroundColor(.secondary)
+    //
+    //            }
+    //            .padding()
+    //            .background(
+    //                RoundedRectangle(cornerRadius: 18)
+    //                    .fill(.ultraThinMaterial)
+    //            )
+    //        }
+    //    }}
     private struct PostRow: View {
         
         let post: ProductModel
+        @State private var isBookmarked = false   // مؤقت
         
         var body: some View {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 
-                ZStack {
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                          .overlay(
-                              RoundedRectangle(cornerRadius: 16)
-                                  .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                          )                        .frame(height: 180)
-                        .cornerRadius(16)
+                ZStack(alignment: .topTrailing) {
                     
                     Image(uiImage: post.image)
                         .resizable()
-                             .scaledToFill()
-                             .frame(height: 180)
-                             .clipped()
-                             .cornerRadius(16)
+                        .scaledToFill()
+                        .frame(height: 180)
+                        .clipped()
+                        .cornerRadius(16)
                     
-                    HStack {
-                        Spacer()
-                        
-                        Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
-                            .font(.caption2)
-                            .padding(.horizontal, )
-                            .padding(.vertical, 4)
-                            .background(post.isGlutenFree ? .grn : .rd)
-                            .cornerRadius(8)
-                            .foregroundColor(.primary)
-                        
-                            .padding(.top,160)
+                    // Bookmark
+                    Button {
+                        isBookmarked.toggle()
+                    } label: {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .padding(8)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
                     }
+                    .padding(10)
+                    
+                    // Gluten label
+                    Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(post.isGlutenFree ? Color.grn : Color.rd)
+                        .cornerRadius(8)
+                        .foregroundStyle(.primary)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 }
                 
+                // Product name
                 Text(post.productName)
                     .font(.headline)
-                
                 HStack {
-                    Text("@\(post.username)")
+                // Rating only
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.yellow)
+                    
+                    Text(String(format: "%.1f", post.rating))
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.yellow)
-                        
-                        Text(String(format: "%.1f", post.rating))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+                        .foregroundStyle(.secondary)
                 }
                 
-                HStack {
-                    Text("💰 \(post.price)")
-                    Spacer()
-                    Text("📍 \(post.location)")
+                // Price + Location (icons احترافية)
+                    Label(post.location, systemImage: "mappin.and.ellipse")
                 }
                 .font(.caption)
-                .foregroundColor(.secondary)
-               
+                .foregroundStyle(.secondary)
+                
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
         }
     }}
+
 #Preview {
     HomeView()
 }

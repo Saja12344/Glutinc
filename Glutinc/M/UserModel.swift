@@ -16,10 +16,11 @@ import AuthenticationServices
 // ✅ نفس موديلك تمامًا
 struct UserModel {
     var appleID: String = ""
-    var name: String = "Jasmin"
+    var name: String = ""
     var photo: UIImage? = nil
     var savedImages: [String] = ["prod1","prod2"]
     var notificationsEnabled: Bool = true
+
 }
 
 // ✅ موديل تسجيل الدخول (نفس اللي عندك)
@@ -41,6 +42,7 @@ final class UserCloudVM: ObservableObject {
     @Published var categories = ["Others","Meat& Alternatives","Drinks", "Grains & Flours","Dairy"]
     @Published var products: [ProductModel] = []
     @Published var hasLoadedProducts = false
+    @Published var userRecordID: String?
 
 
     private let userDefaultsKey = "loggedInUserId"
@@ -59,6 +61,22 @@ final class UserCloudVM: ObservableObject {
                }
            }
        }
+//    var myPosts: [ProductModel] {
+//        guard let userID = signedUser?.id else {
+//            print("❌ signedUser nil – no posts")
+//            return []
+//        }
+//
+//        let filtered = products.filter { $0.ownerAppleID == userID }
+//        print("📦 products:", products.count)
+//        print("👤 myPosts:", filtered.count)
+//
+//        return filtered
+//    }
+ 
+
+
+
 
     func uploadProduct(_ product: ProductModel, completion: @escaping (Bool) -> Void) {
 
@@ -82,46 +100,107 @@ final class UserCloudVM: ObservableObject {
             }
         }
     }
+    
+//    var myPosts: [ProductModel] {
+//        guard let userID = signedUser?.id else { return [] }
+//        return products.filter { $0.ownerAppleID == userID }
+//    }
+    var myPosts: [ProductModel] {
+        guard let ownerID = userRecordID else {
+            print("❌ no userRecordID")
+            return []
+        }
+
+        let filtered = products.filter { $0.ownerAppleID == ownerID }
+        print("👤 ownerID:", ownerID)
+        print("📦 myPosts:", filtered.count)
+
+
+        return filtered
+    }
+
+
 
     // MARK: - ✅ تسجيل الدخول بـ Apple + CloudKit
+
     func handleSignIn(result: Result<ASAuthorization, Error>) {
+
         switch result {
 
         case .success(let authResults):
-            if let credential = authResults.credential as? ASAuthorizationAppleIDCredential {
+            guard let credential = authResults.credential as? ASAuthorizationAppleIDCredential else {
+                return
+            }
 
-                let id = credential.user
-                let name = credential.fullName?.givenName ?? ""
-                let email = credential.email ?? ""
+            let id = credential.user
+            let appleName = credential.fullName?.givenName
+            let email = credential.email ?? ""
 
-                Task {
-                    do {
-                        // ✅ إنشاء / تحديث البروفايل في iCloud
+            // 1️⃣ تحديث الواجهة فورًا
+            self.signedUser = AppUser(
+                id: id,
+                name: appleName ?? "",
+                email: email
+            )
+
+            self.user.appleID = id
+
+            // تحميل المنتجات
+            self.loadProductsFromCloud()
+            self.hasLoadedProducts = true
+
+            self.saveUserSession(user: self.signedUser!)
+
+            // 2️⃣ التعامل مع CloudKit
+            Task {
+                do {
+                    // نحاول نجيب البروفايل أولًا
+                    if let existingProfile = try await ck.fetchUserProfile(by: id) {
+
+                        // ✅ مستخدم قديم → نستخدم الاسم المخزن
+                        await MainActor.run {
+                            self.user.name = existingProfile.displayName
+                            self.userRecordID = existingProfile.recordID?.recordName
+                        }
+
+                    } else {
+                        // 🆕 مستخدم جديد → نستخدم اسم Apple (لو موجود)
+                        let displayName = appleName ?? "User"
+
                         let profile = UserProfile(
                             appleID: id,
-                            displayName: name,
+                            displayName: displayName,
                             email: email
                         )
-                        _ = try await ck.upsertUserProfile(profile)
 
-                        // ✅ تحديث الواجهة
-                        let u = AppUser(id: id, name: name, email: email)
-                        self.signedUser = u
-                        self.saveUserSession(user: u)
+                        try await ck.upsertUserProfile(profile)
 
-                        // ✅ ربط الدخول بالبروفايل الداخلي
-                        await self.setAppleID(id)
+                        await MainActor.run {
+                            self.user.name = displayName
+                            self.userRecordID = id
+                        }
+                    }
 
-                    } catch {
+
+
+                } catch {
+                    await MainActor.run {
                         self.errorMessage = error.localizedDescription
+                        print("❌ CloudKit error:", error.localizedDescription)
                     }
                 }
             }
 
         case .failure(let error):
+            if (error as NSError).code == ASAuthorizationError.canceled.rawValue {
+                return
+            }
             self.errorMessage = error.localizedDescription
         }
     }
+
+
+
 
     // MARK: - ✅ ربط Apple ID بالبروفايل
     func setAppleID(_ id: String) async {
@@ -189,12 +268,19 @@ final class UserCloudVM: ObservableObject {
 
             self.signedUser = AppUser(id: id, name: name, email: email)
 
+            // ⬅️ مهم جدًا
+            self.loadProductsFromCloud()
+            self.hasLoadedProducts = true
+            
             Task {
                 if let profile = try? await ck.fetchUserProfile(by: id) {
                     self.user.appleID = id
                     self.user.name = profile.displayName
+                    self.userRecordID = profile.recordID?.recordName   // ⭐ هنا كمان
+                    print("♻️ session userRecordID:", self.userRecordID ?? "nil")
                 }
             }
+
         }
     }
 
@@ -209,6 +295,47 @@ final class UserCloudVM: ObservableObject {
 
         print("✅ تم تسجيل الخروج ومسح الجلسة")
     }
+
+    // MARK: - ☁️ حذف المستخدم من CloudKit
+    func deleteUserFromCloud() {
+
+        guard let recordName = userRecordID else {
+            print("❌ لا يوجد userRecordID")
+            return
+        }
+
+        let recordID = CKRecord.ID(recordName: recordName)
+        let database = CKContainer(identifier: "iCloud.com.sga.Glutinc")
+            .privateCloudDatabase
+
+        database.delete(withRecordID: recordID) { _, error in
+            if let error = error {
+                print("❌ فشل حذف المستخدم من CloudKit:", error.localizedDescription)
+            } else {
+                print("☁️ تم حذف المستخدم من CloudKit")
+            }
+        }
+    }
+
+
+
+
+    // MARK: - 🗑️ حذف الحساب
+    func deleteAccount() {
+
+        deleteUserFromCloud()
+
+        signedUser = nil
+        user = UserModel()
+        userRecordID = nil
+
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: "\(userDefaultsKey)_name")
+        UserDefaults.standard.removeObject(forKey: "\(userDefaultsKey)_email")
+
+        print("🗑️ تم حذف الحساب محليًا")
+    }
+
 
     // MARK: - ✅ التقييم (بقي كما هو)
     func updateRating(to value: Int) {

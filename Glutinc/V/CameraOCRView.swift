@@ -228,3 +228,26 @@ struct CameraView: View {
 //        )
 //    }
 //}
+import SwiftUI
+import AVFoundation
+
+struct CameraPreview1: UIViewRepresentable {
+    
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+
+        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        previewLayer.videoGravity = .resizeAspectFill   // ✅ حل الآيباد
+        previewLayer.connection?.videoOrientation = .portrait
+
+        view.layer.addSublayer(previewLayer)
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard let previewLayer = uiView.layer.sublayers?.first as? AVCaptureVideoPreviewLayer else { return }
+        previewLayer.frame = uiView.bounds   // ✅ مهم
+    }
+}

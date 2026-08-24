@@ -5,7 +5,7 @@ import MapKit   // لو حابة تطوريه لاحقًا للبحث الحقي
 
 struct Post: View {
     
-    @ObservedObject var cloudVM: UserCloudVM
+    @EnvironmentObject var cloudVM: UserCloudVM
     @Binding var selectedTab: HomeTab   // ⬅️
     @Environment(\.dismiss) private var dismiss
 
@@ -44,8 +44,9 @@ struct Post: View {
         !selectedCategory.isEmpty &&
         cloudVM.rating > 0
     }
+//    let ingredients: [GlutenIngredient]
+    var detectedIngredientNames: [String]
 
-    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -313,6 +314,14 @@ struct Post: View {
     
     // MARK: - النشر (أضفت notes + productURL لو حبيتي)
     func uploadProductToCloud(completion: @escaping (Bool) -> Void) {
+        guard let ownerID = cloudVM.userRecordID else {
+            print("❌ No userRecordID – cannot upload product")
+            completion(false)
+            return
+        }
+
+
+        print("🆔 Uploading with ownerID:", ownerID)
 
         guard let image = selectedImage else {
             print("❌ Image is required")
@@ -329,10 +338,13 @@ struct Post: View {
             price: price,
             location: location,
             category: selectedCategory,
+            detectedIngredients: detectedIngredientNames,
             notes: notes.isEmpty ? nil : notes,
             productURL: productURL.isEmpty ? nil : productURL,
-            image: image        // ✅ الآن صحيح
+            image: image,
+            ownerAppleID: ownerID
         )
+
 
         cloudVM.uploadProduct(product, completion: completion)
     }

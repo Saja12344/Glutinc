@@ -29,9 +29,14 @@ struct ProductModel: Identifiable, Hashable{
     var location: String
     var category: String
     
+    let detectedIngredients: [String]
+
     var notes: String?
     var productURL: String?
     let image: UIImage
+    var ownerAppleID: String
+
+
     
 }
 

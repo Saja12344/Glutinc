@@ -1,3 +1,11 @@
+//
+//  PrivacyView.swift
+//  Glutincc
+//
+//  Created by saja khalid on 27/06/1447 AH.
+//
+
+
 import SwiftUI
 
 struct PrivacyView: View {

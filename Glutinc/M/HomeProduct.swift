@@ -6,10 +6,11 @@
 //
 
 import Foundation
+import UIKit
 
 struct HomeProduct: Identifiable {
     let id = UUID()
-    let imageName: String
+    let imageName: UIImage
     let name: String
     let username: String
     let rating: Double

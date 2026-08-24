@@ -44,13 +44,17 @@ struct UserProfile {
     }
 
     func toRecord(existing: CKRecord? = nil) -> CKRecord {
-        let r = existing ?? CKRecord(recordType: CKTypes.userProfile)
+        let recordID = CKRecord.ID(recordName: appleID)
+        let r = existing ?? CKRecord(recordType: CKTypes.userProfile, recordID: recordID)
+
         r["appleID"]     = appleID as CKRecordValue
         r["displayName"] = displayName as CKRecordValue
         if let email { r["email"] = email as CKRecordValue }
         if let photoAsset { r["photo"] = photoAsset }
+
         return r
     }
+
 }
 
 // MARK: - Post (community in Public DB)

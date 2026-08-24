@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Glutincc.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>buildNumber</key>
+			<string>2</string>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>E3E349791CF110D6463B795308D04EAE186EBE74</string>
+				<key>dateExpires</key>
+				<string>06/07/1448 AH</string>
+				<key>type</key>
+				<string>Cloud Managed Apple Distribution</string>
+			</dict>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>D756J56FJ3.com.sga.Glutinc</string>
+				<key>aps-environment</key>
+				<string>production</string>
+				<key>beta-reports-active</key>
+				<true/>
+				<key>com.apple.developer.icloud-container-environment</key>
+				<string>Production</string>
+				<key>com.apple.developer.icloud-container-identifiers</key>
+				<array>
+					<string>iCloud.com.sga.Glutinc</string>
+				</array>
+				<key>com.apple.developer.icloud-services</key>
+				<array>
+					<string>CloudKit</string>
+					<string>CloudDocuments</string>
+				</array>
+				<key>com.apple.developer.team-identifier</key>
+				<string>D756J56FJ3</string>
+				<key>com.apple.developer.ubiquity-container-identifiers</key>
+				<array>
+					<string>iCloud.com.sga.Glutinc</string>
+				</array>
+				<key>get-task-allow</key>
+				<false/>
+			</dict>
+			<key>name</key>
+			<string>Glutincc.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>868637f4-dbf1-4f1a-b321-c85a0fb56936</string>
+				<key>dateExpires</key>
+				<string>06/07/1448 AH</string>
+				<key>name</key>
+				<string>iOS Team Store Provisioning Profile: com.sga.Glutinc</string>
+			</dict>
+			<key>symbols</key>
+			<true/>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>D756J56FJ3</string>
+				<key>name</key>
+				<string>Saja Al Homrany</string>
+			</dict>
+			<key>versionNumber</key>
+			<string>1.0</string>
+		</dict>
+	</array>
+</dict>
+</plist>
