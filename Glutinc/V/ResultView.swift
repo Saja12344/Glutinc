@@ -1,216 +1,411 @@
-
 import SwiftUI
 
 struct ResultView: View {
-
     @Environment(\.layoutDirection) var layoutDirection
-    @Environment(\.colorScheme) var colorScheme
-
-    @State private var goToPost = false
-
-    @ObservedObject var vm: UserCloudVM
+    @EnvironmentObject var vm: UserCloudVM
     @Binding var selectedTab: HomeTab
-//    let isGlutenFree: Bool
     @Binding var capturedImage: UIImage?
+    @Binding var analysis: ScanAnalysisResult
 
     let image: UIImage
-    let ingredients: [GlutenIngredient]
-    let status: GlutenStatus
+    let evidence: ProductEvidence
+    var onReanalyze: (String) -> Void
+    var onScanAgain: () -> Void
+    var onChooseAnotherPhoto: () -> Void
+    var onSelectIngredientArea: (() -> Void)? = nil
 
-    enum GlutenStatus {
-        case contains
-        case possible
-        case safe
-        case unknown
-    }
+    @State private var goToPost = false
+    @State private var showSignIn = false
+    @State private var isEditingText = false
+    @State private var editedText = ""
 
     var body: some View {
         VStack(spacing: 12) {
-
-            // ❌ زر الإغلاق
-            HStack {
-                // RTL support
-                if layoutDirection == .rightToLeft { Spacer() }
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        capturedImage = nil
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(.plain)
-
-                if layoutDirection != .rightToLeft { Spacer() }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 20)
-
-
-            // 📦 المحتوى
+            header
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    
-                    ZStack(alignment: .bottomLeading) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 220)
-                            .frame(maxWidth: .infinity)
-                            .clipped()
-
-                        // Overlay خفيف
-                        LinearGradient(
-                            colors: [.black.opacity(0.45), .clear],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
+                    imageBlock
+                    statusCard
+                    if analysis.status == .unreadableIngredients {
+                        unreadableSection
+                    } else {
+                        glutenSection
+                        reviewIngredientsSection
+                        unknownSection
+                        possibleOCRSection
+                        manufacturerSection
+                        editSection
+                        scanQualitySection
                     }
-                    .cornerRadius(18)
-                    .padding(.horizontal)
-
-                    // 🧠 النتيجة
-                    VStack(spacing: 12) {
-
-                        Text(titleText)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(titleColor)
-
-                        if status == .contains || status == .possible {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text(listTitle)
-                                    .font(.headline)
-                                    .foregroundColor(titleColor)
-
-                                ForEach(uniqueIngredients.prefix(4), id: \.self) { name in
-                                    HStack {
-                                        Circle()
-                                            .fill(titleColor)
-                                            .frame(width: 8, height: 8)
-
-                                        Text(name.capitalized)
-                                    }
-                                }
-                            }
-                            .padding()
-                            .background(titleColor.opacity(0.08))
-                            .cornerRadius(14)
-                        }
-
-                        if status == .safe {
-                            Text("This product is safe for a gluten-free diet.")
-                                .font(.footnote)
-                                .foregroundColor(.grn.opacity(0.85))
-                        }
-
-                        if status == .unknown {
-                            Text("Please double-check the ingredients manually.")
-                                .font(.footnote)
-                                .foregroundColor(.gry)
-                        }
-                    }
-                    .padding()
-//                    .background(.ultraThinMaterial)
-//                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    // ▶️ Next (ما يظهر في unknown)
-                    if status != .unknown {
-                        Button {
-                            goToPost = true
-                        } label: {
-                            Text("Next")
-                                .font(.headline)
-                                .frame(width: 150, height: 52)
-                                .foregroundStyle(Color.primary) // أبيض دارك / أسود لايت
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .fill(.ultraThinMaterial)   // قلاسي
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                                        )
-                                )
-                        }
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
-                        
-                        
-                        
-                        
-                        NavigationLink(
-                            destination: Post(
-                                selectedTab: $selectedTab,
-                                isGlutenFree: status == .safe,
-                                detectedIngredientNames: detectedIngredientNames,   // ✅ الجديد
-                            ),
-                            isActive: $goToPost
-                        ) {
-                            EmptyView()
-                        }
-                        
-                    }
+                    disclaimer
+                    if analysis.status == .unreadableIngredients {
+                        unreadableActions
+                    } else if !evidence.isLikelyFoodProduct {
+                        rejectionCard
+                    } else if analysis.status != .unverifiable {
+                        nextButton
                     }
                 }
+                .padding(.bottom, 24)
             }
-        
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        }
+        .background(AppColors.navy2)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .onAppear { editedText = analysis.originalOCRText.isEmpty ? analysis.extractedText : analysis.originalOCRText }
+        .sheet(isPresented: $showSignIn) {
+            ZStack {
+                AppColors.navy.ignoresSafeArea()
+                SignInPromptView(
+                    message: L10n.t(
+                        "Sign in to share this scan with the community.",
+                        ar: "سجّل الدخول لمشاركة هذا المسح مع المجتمع."
+                    )
+                )
+                .environmentObject(vm)
+            }
+            .preferredColorScheme(.dark)
+        }
+        .onChange(of: vm.isSignedIn) { signedIn in
+            if signedIn, vm.pendingAuthAction == .post {
+                vm.pendingAuthAction = nil
+                showSignIn = false
+                goToPost = true
+            }
+        }
+        .background(
+            NavigationLink(
+                destination: Post(
+                    selectedTab: $selectedTab,
+                    isGlutenFree: analysis.status.legacyIsGlutenFreeFlag,
+                    detectedIngredientNames: analysis.flaggedNames,
+                    analysisStatus: analysis.status,
+                    manufacturerWarnings: analysis.manufacturerWarnings.map(\.name),
+                    initialImage: image,
+                    barcode: evidence.barcode,
+                    ingredientText: analysis.extractedText,
+                    evidence: evidence
+                ),
+                isActive: $goToPost
+            ) { EmptyView() }
+        )
     }
 
-    // MARK: - Helpers
-    var detectedIngredientNames: [String] {
-          Array(Set(ingredients.map { $0.name.capitalized }))
-      }
-    var uniqueIngredients: [String] {
-        Array(Set(ingredients.map { $0.name.lowercased() }))
+    private var header: some View {
+        HStack {
+            if layoutDirection == .rightToLeft { Spacer() }
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) { capturedImage = nil }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppColors.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(AppColors.card))
+            }
+            .accessibilityLabel(L10n.t("Close result", ar: "إغلاق النتيجة"))
+            if layoutDirection != .rightToLeft { Spacer() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
     }
 
-    var titleText: String {
-        switch status {
-        case .contains: return "Contains Gluten ❌"
-        case .possible: return "May Contain Gluten ⚠️"
-        case .safe: return "Gluten-Free ✅"
-        case .unknown: return "Unknown ❓"
+    private var imageBlock: some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFill()
+            .frame(height: 180)
+            .frame(maxWidth: .infinity)
+            .clipped()
+            .cornerRadius(18)
+            .padding(.horizontal)
+            .accessibilityLabel(L10n.t("Scanned ingredient label", ar: "ملصق المكونات الممسوح"))
+    }
+
+    private var statusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: analysis.status.iconName)
+                    .font(.title2)
+                    .foregroundStyle(statusColor)
+                Text(analysis.status.accessibilityName)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(statusColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(analysis.explanation)
+                .font(.subheadline)
+                .foregroundStyle(AppColors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if analysis.status == .unreadableIngredients {
+                Text(L10n.t(
+                    "OCR could not read the ingredient list clearly.",
+                    ar: "تعذر على التعرّف البصري قراءة قائمة المكونات بوضوح."
+                ))
+                .font(.footnote)
+                .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(statusColor.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(analysis.status.accessibilityName). \(analysis.explanation)")
+    }
+
+    @ViewBuilder
+    private var unreadableSection: some View {
+        #if DEBUG
+        DisclosureGroup {
+            Text(analysis.originalOCRText.isEmpty ? "—" : analysis.originalOCRText)
+                .font(.caption.monospaced())
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Text("DEBUG OCR text")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(AppColors.teal)
+        }
+        .padding()
+        .background(AppColors.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+        #endif
+    }
+
+    @ViewBuilder
+    private var unreadableActions: some View {
+        VStack(spacing: 10) {
+            Button(action: onScanAgain) {
+                Text(L10n.t("Scan Again", ar: "إعادة المسح"))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .foregroundStyle(AppColors.navy)
+                    .background(AppColors.teal)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            Button(action: onChooseAnotherPhoto) {
+                Text(L10n.t("Choose Another Photo", ar: "اختيار صورة أخرى"))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .background(AppColors.card)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            if let onSelectIngredientArea {
+                Button(action: onSelectIngredientArea) {
+                    Text(L10n.t("Select Ingredient Area", ar: "تحديد منطقة المكونات"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .foregroundStyle(AppColors.teal)
+                        .background(AppColors.navy3)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var glutenSection: some View {
+        if !analysis.glutenHits.isEmpty {
+            card(title: L10n.t("Ingredients that triggered this result", ar: "المكونات التي أدت إلى هذه النتيجة")) {
+                ForEach(analysis.glutenHits) { hit in
+                    ingredientRow(hit.name, color: AppColors.danger)
+                }
+            }
         }
     }
 
-    var descriptionText: String {
-        switch status {
-        case .contains:
-            return "This product contains ingredients associated with gluten."
-        case .possible:
-            return "This product may contain gluten due to uncertain ingredients."
-        case .safe:
-            return "No gluten-related ingredients were detected."
-        case .unknown:
-            return "The ingredients could not be identified with certainty."
+    @ViewBuilder
+    private var reviewIngredientsSection: some View {
+        if !analysis.ambiguousHits.isEmpty {
+            card(title: L10n.t("Ingredients that need review", ar: "مكونات تحتاج إلى مراجعة")) {
+                ForEach(analysis.ambiguousHits) { hit in
+                    ingredientRow(hit.name, color: AppColors.warning)
+                }
+            }
         }
     }
 
-    var listTitle: String {
-        status == .contains
-        ? "Detected Gluten Ingredients"
-        : "Possibly Risky Ingredients"
+    @ViewBuilder
+    private var unknownSection: some View {
+        if !analysis.unknownHits.isEmpty {
+            card(title: L10n.t("Text we couldn't identify", ar: "نصوص تعذر التعرّف عليها")) {
+                ForEach(analysis.unknownHits) { hit in
+                    ingredientRow(hit.name, color: AppColors.textSecondary)
+                }
+            }
+        }
     }
 
-    var titleColor: Color {
-        switch status {
-        case .contains: return .rd
-        case .possible: return .orng
-        case .safe: return .grn
-        case .unknown: return .gry
+    @ViewBuilder
+    private var possibleOCRSection: some View {
+        if !analysis.possibleOCRHits.isEmpty {
+            card(title: L10n.t("Possible OCR issue detected", ar: "تم اكتشاف مشكلة محتملة في قراءة النص")) {
+                Text(L10n.t(
+                    "These look similar to gluten terms but are not confirmed.",
+                    ar: "هذه النصوص تشبه مصطلحات الغلوتين لكنها غير مؤكدة."
+                ))
+                .font(.footnote)
+                .foregroundStyle(AppColors.textSecondary)
+                ForEach(analysis.possibleOCRHits) { hit in
+                    ingredientRow(hit.name, color: AppColors.warning)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var manufacturerSection: some View {
+        if !analysis.manufacturerWarnings.isEmpty {
+            card(title: L10n.t("Manufacturer warnings", ar: "تحذيرات الشركة المصنعة")) {
+                Text(L10n.t(
+                    "These warnings come from the label text and are separate from ingredient detection. Their absence does not mean the product is free from cross-contact.",
+                    ar: "هذه التحذيرات من نص الملصق وهي منفصلة عن تحليل المكونات. غيابها لا يعني أن المنتج خالٍ من التلوث التبادلي."
+                ))
+                .font(.footnote)
+                .foregroundStyle(AppColors.textSecondary)
+                ForEach(analysis.manufacturerWarnings) { warning in
+                    ingredientRow(warning.name, color: AppColors.warning)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                if !isEditingText {
+                    editedText = analysis.extractedText
+                }
+                isEditingText.toggle()
+            } label: {
+                Text(L10n.t("Edit extracted text", ar: "تعديل النص المستخرج"))
+                    .font(.headline)
+                    .foregroundStyle(AppColors.teal)
+            }
+            if isEditingText {
+                TextEditor(text: $editedText)
+                    .frame(minHeight: 120)
+                    .padding(8)
+                    .scrollContentBackground(.hidden)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .background(AppColors.navy3)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button {
+                    onReanalyze(editedText)
+                    isEditingText = false
+                } label: {
+                    Text(L10n.t("Analyze Again", ar: "إعادة التحليل"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .foregroundStyle(AppColors.navy)
+                        .background(AppColors.teal)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var scanQualitySection: some View {
+        if analysis.scanQuality != .good {
+            card(title: L10n.t("Scan quality", ar: "جودة المسح")) {
+                Text(analysis.scanQuality == .poor
+                     ? L10n.t("The scan quality is too low to confirm ingredients.", ar: "جودة المسح منخفضة جدًا لتأكيد المكونات.")
+                     : L10n.t("Part of the label may be incomplete or low confidence.", ar: "قد يكون جزء من الملصق غير مكتمل أو منخفض الثقة."))
+                    .font(.footnote)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+    }
+
+    private var disclaimer: some View {
+        Text(ScanAnalysisResult.scannerDisclaimer)
+            .font(.subheadline)
+            .foregroundStyle(AppColors.textSecondary)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.navy3)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal)
+            .accessibilityLabel(L10n.t("Important disclaimer", ar: "تنبيه مهم") + ". " + ScanAnalysisResult.scannerDisclaimer)
+    }
+
+    private var rejectionCard: some View {
+        Text(evidence.rejectionMessage)
+            .font(.subheadline)
+            .foregroundStyle(AppColors.textPrimary)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.warning.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal)
+            .accessibilityLabel(evidence.rejectionMessage)
+    }
+
+    private var nextButton: some View {
+        Button {
+            if vm.requireSignIn(for: .post) {
+                goToPost = true
+            } else {
+                showSignIn = true
+            }
+        } label: {
+            Text(L10n.t("Share with community", ar: "مشاركة مع المجتمع"))
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .foregroundStyle(AppColors.navy)
+                .background(AppColors.teal)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .padding(.horizontal)
+        .accessibilityHint(L10n.t("Opens the community post form", ar: "يفتح نموذج منشور المجتمع"))
+    }
+
+    private func card(title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(AppColors.textPrimary)
+            content()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    private func ingredientRow(_ name: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 7))
+                .foregroundStyle(color)
+            Text(name)
+                .foregroundStyle(AppColors.textPrimary)
+        }
+    }
+
+    private var statusColor: Color {
+        switch analysis.status.tint {
+        case .red: return AppColors.danger
+        case .orange: return AppColors.warning
+        case .teal: return AppColors.teal
+        case .gray: return AppColors.textSecondary
         }
     }
 }

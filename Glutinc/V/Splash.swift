@@ -104,21 +104,7 @@ struct Splash: View {
                     .environmentObject(cloudVM)
             } else {
                 ZStack {
-                    
-                    // ✅ الخلفية المتفق عليها
-                    Color(colorScheme == .dark ? .black : .white)
-                        .ignoresSafeArea()
-                    
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.12, green: 0.48, blue: 0.95)
-                                .opacity(colorScheme == .dark ? 0.35 : 0.55),
-                            Color.clear
-                        ],
-                        startPoint: .topTrailing,
-                        endPoint: .center
-                    )
-                    .ignoresSafeArea()
+                    BackgroundView()
                     
                     // ✅ المحتوى
                     HStack(spacing: 12) {

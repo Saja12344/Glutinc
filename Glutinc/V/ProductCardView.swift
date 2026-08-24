@@ -86,7 +86,9 @@
 //                    HStack {
 //                        Spacer()
 //                        
-//                        Text(isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+//                        Text(isGlutenFree
+//                             ? L10n.t("No gluten ingredients flagged", ar: "لم تُرصد مكونات غلوتين")
+//                             : L10n.t("Gluten ingredient flagged", ar: "تم رصد مكوّن غلوتين"))
 //                            .font(.caption2)
 //                            .fontWeight(.semibold)
 //                            .padding(.horizontal, 8)
@@ -196,7 +198,9 @@ struct ProductCardView: View {
                     HStack {
                         Spacer()
 
-                        Text(isGlutenFree ? "Gluten-Free" : "Contains Gluten")
+                        Text(isGlutenFree
+                             ? L10n.t("No gluten ingredients flagged", ar: "لم تُرصد مكونات غلوتين")
+                             : L10n.t("Gluten ingredient flagged", ar: "تم رصد مكوّن غلوتين"))
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .padding(.horizontal, 8)

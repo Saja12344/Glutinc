@@ -9,26 +9,16 @@ enum HomeTab {
 }
 
 struct MainTabContainer: View {
-//    @State private var selectedTab: HomeTab = .scan
-    @StateObject var userVM = UserCloudVM()
+    @EnvironmentObject var userVM: UserCloudVM
     @State private var selectedTab: HomeTab = .wheat
-
 
     init() {
         let appearance = UITabBarAppearance()
-        
-        // نبدأ بخلفية افتراضية
-        appearance.configureWithDefaultBackground()
-        
-        // نحط البلور (قلاس إفكت)
-        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
-        
-        // نضيف لون خفيف فوق البلور (اختياري)
-        appearance.backgroundColor = UIColor.btn.withAlphaComponent(0.12)
-
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(AppColors.navy2)
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(AppColors.textSecondary)
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(AppColors.teal)
         UITabBar.appearance().standardAppearance = appearance
-        
-        // مهم للـ scroll edge في iOS 15+
         if #available(iOS 15.0, *) {
             UITabBar.appearance().scrollEdgeAppearance = appearance
         }
@@ -51,6 +41,7 @@ struct MainTabContainer: View {
                     cloudVM: userVM,
                     selectedTab: $selectedTab
                   )
+                  .environmentObject(userVM)
                   .toolbar(.hidden, for: .tabBar) 
                   .tabItem {
                       Image(systemName: "camera")

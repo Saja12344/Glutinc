@@ -154,7 +154,6 @@
 //}
 import SwiftUI
 import AVFoundation
-import Vision
 import Combine
 
 @MainActor
@@ -164,6 +163,19 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
     @Published var extractedText: String = ""
     @Published var capturedImage: UIImage?
     @Published var glutenFound: [GlutenIngredient] = []
+    @Published var analysis = ScanAnalysisResult.empty
+    @Published var detectedBarcodes: [String] = []
+    @Published var captureSource: ScanCaptureSource = .camera
+    @Published var libraryOriginalImage: UIImage?
+    @Published var needsCaptureTips = false
+    @Published var productEvidence = ProductEvidence(
+        barcode: nil,
+        extractedText: "",
+        hasIngredientList: false,
+        hasNutritionLabel: false,
+        hasPackagingKeywords: false,
+        recognizedIngredientCount: 0
+    )
     private var subjectAreaObserver: NSObjectProtocol?
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     // ✅ إعدادات الكاميرا
@@ -181,207 +193,9 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
 //            return .unknown
 //        }
 //    }
-    var status: ResultView.GlutenStatus {
-
-        let strictNames = glutenStrict + glutenStrictAR
-        let possibleNames = glutenPossible + glutenPossibleAR
-
-        if glutenFound.contains(where: { strictNames.contains($0.name) }) {
-            return .contains
-        }
-
-        if glutenFound.contains(where: { possibleNames.contains($0.name) }) {
-            return .possible
-        }
-
-        // ⭐ OCR قرأ نص واضح
-        if extractedText.count > 20 {
-            return .safe
-        }
-
-        return .unknown
+    var status: ScanAnalysisStatus {
+        analysis.status
     }
-
-    // ✅ كلمات الغلوتين
-    private let glutenStrict = [
-        // Grains & Flours
-        "wheat",
-        "barley",
-        "rye",
-        "malt",
-        "malt flavoring",
-        "malt vinegar",
-        "regular pasta",
-        "flour tortillas",
-        "pretzels",
-        "matzo",
-
-        // Potatoes
-        "french fries fried with other foods",
-
-        // Dairy
-        "malted milk",
-
-        // Eggs
-        "eggs benedict",
-
-        // Meat & Poultry
-        "breaded meat",
-        "flour coated meat",
-
-        // Soy & Alternatives
-        "seitan",
-        "3-grain tempeh",
-
-        // Nuts & Fruits & Vegetables
-        "flour coated nuts",
-        "fruits with flour sauce",
-        "vegetables with flour sauce",
-
-        // Sauces & Seasonings
-        "regular soy sauce",
-        "sauces containing flour",
-
-        // Beverages
-        "beer",
-//        "ale",
-        "lager",
-        "gluten-removed beer"
-    ]
-
-
-    private let glutenPossible = [
-        // Grains
-        "oats (uncontaminated only)",
-        "rice products with flavorings",
-        "seasoned chips",
-
-        // Potatoes
-        "french fries (shared fryer)",
-
-        // Dairy
-        "flavored yogurt",
-        "flavored cheese spreads",
-
-        // Meat
-        "marinated meat",
-
-        // Soy
-        "miso",
-
-        // Beans
-        "flavored canned beans",
-
-        // Dressings
-        "dressings",
-
-        // Beverages
-        "flavored almond milk",
-        "flavored soy milk"
-    ]
-    private let glutenFreeSafe = [
-        // Grains & Flours
-        "amaranth",
-        "arrowroot",
-        "buckwheat",
-        "corn",
-        "cornstarch",
-        "flax",
-        "millet",
-        "quinoa",
-        "polenta",
-        "plain rice",
-        "sorghum",
-        "tapioca",
-        "teff",
-        "gluten-free pasta",
-        "corn tortillas",
-        "plain corn chips",
-        "plain potato chips",
-
-        // Potatoes
-        "plain potatoes",
-        "sweet potatoes",
-
-        // Dairy
-        "milk",
-        "plain yogurt",
-        "cream",
-        "cheese",
-
-        // Eggs
-        "regular eggs",
-
-        // Meat & Fish
-        "unprocessed meat",
-
-        // Soy
-        "tofu",
-        "edamame",
-        "regular tempeh",
-
-        // Nuts & Seeds & Beans
-        "all natural nuts",
-        "all natural seeds",
-        "all natural beans",
-
-        // Fruits & Vegetables
-        "all natural fruits",
-        "all natural vegetables",
-
-        // Oils & Seasonings
-        "butter",
-        "oils",
-        "salt",
-        "pepper",
-        "honey",
-        "jam",
-        "gluten-free soy sauce",
-
-        // Beverages
-        "coffee",
-        "tea",
-        "juices"
-    ]
-    private let glutenStrictAR = [
-        "قمح", "شعير", "جاودار", "مالت", "نكهة المالت", "خل المالت",
-        "مكرونة عادية", "تورتيلا دقيق", "بريتزل", "ماتزو",
-        "بطاطس مقلية بزيت مشترك",
-        "حليب مملت", "بيض بندكت",
-        "لحم مغطى بالبقسماط", "لحم مغطى بالدقيق",
-        "سيتان", "تمبيه ثلاثي الحبوب",
-        "مكسرات مغطاة بالدقيق", "فواكه بصلصة دقيق", "خضار بصلصة دقيق",
-        "صويا صوص عادي", "صلصات فيها دقيق",
-        "بيرة", "إيل", "لايغر", "بيرة منزوعة الغلوتين"
-    ]
-    private let glutenPossibleAR = [
-        "شوفان", "منتجات أرز منكهة", "شيبس منكه",
-        "بطاطس مقلية بزيت مشترك",
-        "زبادي منكه", "جبن منكه",
-        "لحم متبل",
-        "ميسو",
-        "فاصوليا معلبة منكهة",
-        "تتبيلات",
-        "حليب لوز منكه", "حليب صويا منكه"
-    ]
-    private let glutenFreeSafeAR = [
-        "قطيفة", "أروروت", "حنطة سوداء", "ذرة", "نشا الذرة", "بذور الكتان",
-        "دخن", "كينوا", "بولينتا", "أرز عادي", "ذرة رفيعة", "تابيوكا",
-        "تيف", "مكرونة خالية من الغلوتين", "تورتيلا ذرة",
-        "شيبس ذرة", "شيبس بطاطس",
-        "بطاطس عادية", "بطاطس حلوة",
-        "حليب", "زبادي طبيعي", "كريمة", "جبن",
-        "بيض",
-        "لحم غير معالج",
-        "توفو", "إدامامي", "تمبيه عادي",
-        "مكسرات طبيعية", "بذور طبيعية", "بقوليات طبيعية",
-        "فواكه طبيعية", "خضروات طبيعية",
-        "زبدة", "زيوت", "ملح", "فلفل", "عسل", "مربى",
-        "صويا صوص خالي من الغلوتين",
-        "قهوة", "شاي", "عصائر"
-    ]
-
-
 
     // ✅ فحص الصلاحية وتشغيل الكاميرا
     func checkCameraPermissionAndStart() {
@@ -407,6 +221,9 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
         if session.isRunning { return }
 
         session.beginConfiguration()
+        if session.canSetSessionPreset(.photo) {
+            session.sessionPreset = .photo
+        }
 
         let discovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: [
@@ -435,6 +252,11 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
 
         session.addInput(input)
         session.addOutput(photoOutput)
+        if #available(iOS 16.0, *) {
+            photoOutput.maxPhotoQualityPrioritization = .quality
+        } else {
+            photoOutput.isHighResolutionCaptureEnabled = true
+        }
 
         session.commitConfiguration()
         session.startRunning()
@@ -606,6 +428,11 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
     // ✅ التقاط صورة
     func takePhoto() {
         let settings = AVCapturePhotoSettings()
+        if #available(iOS 16.0, *) {
+            settings.photoQualityPrioritization = .quality
+        } else if photoOutput.isHighResolutionCaptureEnabled {
+            settings.isHighResolutionPhotoEnabled = true
+        }
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
     func toggleFlash(isOn: Bool) {
@@ -630,189 +457,74 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
               let uiImage = UIImage(data: data) else { return }
 
         self.capturedImage = uiImage
-        recognizeText(from: uiImage)
+        self.captureSource = .camera
+        recognizeText(from: uiImage, cropToFocusGuide: true)
     }
 
-    // ✅ OCR
     func recognizeText(from image: UIImage) {
-        guard let cgImage = image.cgImage else { return }
+        recognizeText(from: image, cropToFocusGuide: false)
+    }
 
-        let requestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+    func recognizeCroppedLibraryImage(_ image: UIImage) {
+        captureSource = .photoLibrary
+        capturedImage = image
+        recognizeText(from: image, cropToFocusGuide: false)
+    }
 
-        let request = VNRecognizeTextRequest { [weak self] request, _ in
-            guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
+    func resetScanPresentation() {
+        capturedImage = nil
+        analysis = .empty
+        glutenFound = []
+        extractedText = ""
+    }
 
-            let text = observations
-                .compactMap { $0.topCandidates(1).first?.string }
-                .joined(separator: "\n")
-
-            DispatchQueue.main.async {
-                self?.extractedText = text
-                self?.detectGluten(in: text)
-            }
+    func recognizeText(from image: UIImage, cropToFocusGuide: Bool) {
+        detectedBarcodes = ProductValidator.detectBarcodes(in: image)
+        LabelOCRService.recognize(image: image, cropToFocusGuide: cropToFocusGuide) { [weak self] ocr in
+            guard let self else { return }
+            self.extractedText = ocr.originalText
+            self.applyAnalysis(
+                text: ocr.originalText,
+                source: .ocr,
+                observations: ocr.observations
+            )
+            self.productEvidence = ProductValidator.evidence(
+                image: image,
+                extractedText: ocr.originalText,
+                analysis: self.analysis,
+                knownBarcodes: self.detectedBarcodes
+            )
         }
-
-        request.recognitionLevel = .accurate
-        try? requestHandler.perform([request])
     }
 
-    // ✅ تحليل الغلوتين
-//    private func detectGluten(in text: String) {
-//        let lower = text.lowercased()
-//        let words = lower.split { !$0.isLetter }.map { String($0) }
-//        let allKeywords = glutenStrict + glutenPossible
-//        var found: [GlutenIngredient] = []
-//
-//        for word in words {
-//            for keyword in allKeywords {
-//                if similarity(word, keyword) > 0.7 {
-//                    found.append(GlutenIngredient(name: keyword))
-//                }
-//            }
-//        }
-//
-//        glutenFound = found
-//    }
-    var allStrict: [String] {
-        glutenStrict + glutenStrictAR
-    }
-
-    var allPossible: [String] {
-        glutenPossible + glutenPossibleAR
-    }
-
-//    private func detectGluten(in text: String) {
-//        let lower = text.lowercased()
-//
-//        var found: [GlutenIngredient] = []
-//        var matchedKeywords = Set<String>() // ✅ لمنع التكرار
-//        var didMatchAnything = false        // ✅ لمعرفة هل تعرفنا على أي مكوّن
-//
-//        // ✅ أولاً: Strict (خطر)
-//        for keyword in allStrict {
-//            if lower.contains(keyword.lowercased()) {
-//                didMatchAnything = true
-//                if !matchedKeywords.contains(keyword) {
-//                    matchedKeywords.insert(keyword)
-//                    found.append(GlutenIngredient(name: keyword))
-//                }
-//            }
-//        }
-//
-//        // ✅ ثانياً: Possible (محتمل)
-//        for keyword in allPossible {
-//            if lower.contains(keyword.lowercased()) {
-//                didMatchAnything = true
-//                if !matchedKeywords.contains(keyword) {
-//                    matchedKeywords.insert(keyword)
-//                    found.append(GlutenIngredient(name: keyword))
-//                }
-//            }
-//        }
-//
-//        // ✅ ثالثاً: تحديد النتيجة النهائية
-////        if found.isEmpty {
-////            if didMatchAnything {
-////                // تم التعرف على كلمات لكن ليست خطرة
-////                found.append(GlutenIngredient(name: "Safe"))
-////            } else {
-////                // لم يتم التعرف على أي مكونات معروفة
-////                found.append(GlutenIngredient(name: "Unknown ❔"))
-////            }
-////        }
-////
-////        glutenFound = found
-//        if found.isEmpty {
-//            // إذا في كلمات من سياق المكونات → نقول Unknown
-//            if containsFoodContext {
-//                found.append(GlutenIngredient(name: "Unknown ❔"))
-//            } else {
-//                // بدون مكونات: نخلي القائمة فاضية
-//                found = []
-//            }
-//        }
-//
-//    }
-    private func detectGluten(in text: String) {
-
-        let enText = normalizeEnglish(text)
-        let arText = normalizeArabic(text)
-
-        var found: [GlutenIngredient] = []
-        var matched = Set<String>()
-
-        // 🔴 Strict
-        for keyword in glutenStrict {
-            if enText.contains(keyword) {
-                matched.insert(keyword)
-                found.append(GlutenIngredient(name: keyword))
-            }
+    func reanalyzeEditedText(_ text: String) {
+        extractedText = text
+        applyAnalysis(text: text, source: .userEdited, observations: [])
+        if let image = capturedImage {
+            productEvidence = ProductValidator.evidence(
+                image: image,
+                extractedText: text,
+                analysis: analysis,
+                knownBarcodes: detectedBarcodes
+            )
         }
-
-        for keyword in glutenStrictAR {
-            if arText.contains(normalizeArabic(keyword)) {
-                matched.insert(keyword)
-                found.append(GlutenIngredient(name: keyword))
-            }
-        }
-
-        // 🟠 Possible
-        for keyword in glutenPossible {
-            if enText.contains(keyword) {
-                matched.insert(keyword)
-                found.append(GlutenIngredient(name: keyword))
-            }
-        }
-
-        for keyword in glutenPossibleAR {
-            if arText.contains(normalizeArabic(keyword)) {
-                matched.insert(keyword)
-                found.append(GlutenIngredient(name: keyword))
-            }
-        }
-
-        // ✅ نحفظ فقط المكونات
-        glutenFound = found
-    }
-    private func normalizeArabic(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "[ًٌٍَُِّْ]", with: "", options: .regularExpression)
-            .replacingOccurrences(of: "أ", with: "ا")
-            .replacingOccurrences(of: "إ", with: "ا")
-            .replacingOccurrences(of: "آ", with: "ا")
-            .replacingOccurrences(of: "ى", with: "ي")
-            .replacingOccurrences(of: "ة", with: "ه")
     }
 
-    private func normalizeEnglish(_ text: String) -> String {
-        text.lowercased()
-    }
-
-    private func similarity(_ s1: String, _ s2: String) -> Double {
-        let longer = max(s1.count, s2.count)
-        guard longer != 0 else { return 1.0 }
-        let distance = levenshtein(s1, s2)
-        return 1.0 - Double(distance) / Double(longer)
-    }
-
-    private func levenshtein(_ aStr: String, _ bStr: String) -> Int {
-        let a = Array(aStr), b = Array(bStr)
-        var dist = Array(repeating: Array(repeating: 0, count: b.count + 1), count: a.count + 1)
-
-        for i in 0...a.count { dist[i][0] = i }
-        for j in 0...b.count { dist[0][j] = j }
-
-        for i in 1...a.count {
-            for j in 1...b.count {
-                dist[i][j] = min(
-                    dist[i-1][j] + 1,
-                    dist[i][j-1] + 1,
-                    dist[i-1][j-1] + (a[i-1] == b[j-1] ? 0 : 1)
-                )
-            }
-        }
-
-        return dist[a.count][b.count]
+    private func applyAnalysis(
+        text: String,
+        source: ScanTextSource,
+        observations: [OCRTextObservation]
+    ) {
+        let result = ScanAnalyzer.analyze(
+            text: text,
+            source: source,
+            observations: observations
+        )
+        analysis = result
+        needsCaptureTips = result.status == .unreadableIngredients || result.tooSmallForOCR
+        glutenFound = result.glutenHits.map { GlutenIngredient(name: $0.name) }
+            + result.ambiguousHits.map { GlutenIngredient(name: $0.name) }
+            + result.unknownHits.map { GlutenIngredient(name: $0.name) }
     }
 }
 

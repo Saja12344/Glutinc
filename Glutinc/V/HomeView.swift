@@ -1,286 +1,217 @@
-
 import SwiftUI
 
 struct HomeView: View {
-    
     @EnvironmentObject var cloudVM: UserCloudVM
     @State private var searchText: String = ""
-    
-    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedCategory: ProductCategory? = nil
+    @State private var showSignIn = false
     @Environment(\.layoutDirection) private var layoutDirection
 
-    
-    // ✅ فلترة صحيحة 100% على ProductModel
     var filteredProducts: [ProductModel] {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        return cloudVM.products.filter { product in
-            
+        return cloudVM.exploreProducts.filter { product in
             let matchesSearch =
-            q.isEmpty ||
-            product.productName.localizedCaseInsensitiveContains(q) ||
-            product.username.localizedCaseInsensitiveContains(q) ||
-            product.location.localizedCaseInsensitiveContains(q) ||
-            product.category.localizedCaseInsensitiveContains(q)
-            
+                q.isEmpty ||
+                product.productName.localizedCaseInsensitiveContains(q) ||
+                product.username.localizedCaseInsensitiveContains(q) ||
+                product.location.localizedCaseInsensitiveContains(q) ||
+                product.category.localizedCaseInsensitiveContains(q)
             let matchesCategory =
-            selectedCategory == nil ||
-            product.category == selectedCategory?.rawValue
-            
+                selectedCategory == nil ||
+                product.category == selectedCategory?.rawValue
             return matchesSearch && matchesCategory
         }
     }
-    
+
     enum ProductCategory: String, CaseIterable, Identifiable {
         case grains = "Grains & Flours"
         case dairy = "Dairy"
         case drinks = "Drinks"
         case meat = "Meat & Alternatives"
         case others = "Others"
-        
         var id: String { rawValue }
     }
-    
+
     var body: some View {
         NavigationStack {
-            
             ZStack {
-                Color(colorScheme == .dark ? .black : .white)
-                    .ignoresSafeArea()
-                
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.12, green: 0.48, blue: 0.95).opacity(
-                            colorScheme == .dark ? 0.35 : 0.55
-                        ),
-                        Color.clear
-                    ],
-                    startPoint: .topTrailing,
-                    endPoint: .center
-                )
-                .ignoresSafeArea()
-                VStack {
-                    
-                    
-                    // 🔹 Categories
-                    
+                BackgroundView()
+                VStack(spacing: 0) {
+                    Text(L10n.t(
+                        "Community content is shared by users and is not medical advice.",
+                        ar: "محتوى المجتمع يشاركه المستخدمون ولا يُعد استشارة طبية."
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            
-                            // All Button
-                            Button {
+                            categoryChip(L10n.t("All", ar: "الكل"), selected: selectedCategory == nil) {
                                 selectedCategory = nil
-                            } label: {
-                                Text("All")
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 6)
-                                    .background(selectedCategory == nil ? .btn : .gray.opacity(0.2))
-                                    .foregroundColor(.primary)
-                                    .cornerRadius(12)
                             }
-                            
                             ForEach(ProductCategory.allCases) { category in
-                                Button {
+                                categoryChip(category.rawValue, selected: selectedCategory == category) {
                                     selectedCategory = category
-                                } label: {
-                                    Text(category.rawValue)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 6)
-                                        .background(
-                                            selectedCategory == category
-                                            ? .blue
-                                            : .gray.opacity(0.2)
-                                        )
-                                        .foregroundColor(.primary)
-                                        .cornerRadius(12)
                                 }
                             }
                         }
-                        .padding(.horizontal, 16)   // 👈 نفس الفيد
-                        .padding(.top, 6)
-                        .padding(.bottom, 12)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                     }
-                    
-                    // 🔹 Feed
+
                     ScrollView {
                         LazyVStack(spacing: 14) {
-                            
-                            ForEach(cloudVM.products) { post in
+                            ForEach(filteredProducts) { post in
                                 NavigationLink {
                                     ProductDetailView(post: post)
                                 } label: {
-                                    PostRow(post: post)
+                                    PostRow(post: post, onSave: handleSave)
                                 }
                                 .buttonStyle(.plain)
                             }
 
-                            
                             if filteredProducts.isEmpty {
-                                Text("No products yet")
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 40)
+                                VStack(spacing: 8) {
+                                    Text(L10n.t("No Explore products", ar: "لا توجد منتجات في الاستكشاف"))
+                                        .font(.headline)
+                                        .foregroundStyle(AppColors.textSecondary)
+                                    Text(L10n.t(
+                                        "Only verified products with no gluten ingredients detected appear here.",
+                                        ar: "تظهر هنا فقط المنتجات الموثّقة التي لم يُكتشف فيها مكونات غلوتين."
+                                    ))
+                                    .font(.footnote)
+                                    .foregroundStyle(AppColors.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                }
+                                .padding(.top, 40)
+                                .padding(.horizontal)
                             }
                         }
-                        .padding(.horizontal, 16)   // 👈 نفس القيمة
+                        .padding(.horizontal, 16)
                     }
-                }}
-            .navigationTitle("Explore")
-            .searchable(text: $searchText, prompt: "Search")
-            .onAppear {
-                print("🏠 Home appeared – loading products")
-                cloudVM.loadProductsFromCloud()
+                }
             }
+            .navigationTitle(L10n.t("Explore", ar: "استكشف"))
+            .searchable(text: $searchText, prompt: L10n.t("Search", ar: "بحث"))
+            .onAppear { cloudVM.loadExploreProducts() }
+            .sheet(isPresented: $showSignIn) {
+                ZStack {
+                    AppColors.navy.ignoresSafeArea()
+                    SignInPromptView(
+                        message: L10n.t(
+                            "Sign in to save posts to your profile.",
+                            ar: "سجّل الدخول لحفظ المنشورات في ملفك."
+                        )
+                    )
+                    .environmentObject(cloudVM)
+                }
+                .preferredColorScheme(.dark)
+            }
+            .onChange(of: cloudVM.isSignedIn) { signedIn in
+                if signedIn, case .save(let id) = cloudVM.pendingAuthAction {
+                    cloudVM.pendingAuthAction = nil
+                    showSignIn = false
+                    cloudVM.toggleSave(productID: id)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func handleSave(productID: String) {
+        if cloudVM.isSignedIn {
+            cloudVM.toggleSave(productID: productID)
+        } else {
+            _ = cloudVM.requireSignIn(for: .save(productID: productID))
+            showSignIn = true
         }
     }
-    //    private struct PostRow: View {
-    //
-    //        let post: ProductModel
-    //
-    //        var body: some View {
-    //            VStack(alignment: .leading, spacing: 10) {
-    //
-    //                ZStack {
-    //                    Rectangle()
-    //                        .fill(.ultraThinMaterial)
-    //                          .overlay(
-    //                              RoundedRectangle(cornerRadius: 16)
-    //                                  .stroke(Color.white.opacity(0.25), lineWidth: 1)
-    //                          )                        .frame(height: 180)
-    //                        .cornerRadius(16)
-    //
-    //                    Image(uiImage: post.image)
-    //                        .resizable()
-    //                             .scaledToFill()
-    //                             .frame(height: 180)
-    //                             .clipped()
-    //                             .cornerRadius(16)
-    //
-    //                    HStack {
-    //                        Spacer()
-    //
-    //                        Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
-    //                            .font(.caption2)
-    //                            .padding(.horizontal, )
-    //                            .padding(.vertical, 4)
-    //                            .background(post.isGlutenFree ? .grn : .rd)
-    //                            .cornerRadius(8)
-    //                            .foregroundColor(.primary)
-    //
-    //                            .padding(.top,160)
-    //                    }
-    //                }
-    //
-    //                Text(post.productName)
-    //                    .font(.headline)
-    //
-    //                HStack {
-    //                    Text("@\(post.username)")
-    //                        .font(.subheadline)
-    //                        .foregroundColor(.secondary)
-    //
-    //                    Spacer()
-    //
-    //                    HStack(spacing: 4) {
-    //                        Image(systemName: "star.fill")
-    //                            .font(.system(size: 12))
-    //                            .foregroundColor(.yellow)
-    //
-    //                        Text(String(format: "%.1f", post.rating))
-    //                            .font(.subheadline)
-    //                            .foregroundColor(.secondary)
-    //                    }
-    //                }
-    //
-    //                HStack {
-    //                    Text("💰 \(post.price)")
-    //                    Spacer()
-    //                    Text("📍 \(post.location)")
-    //                }
-    //                .font(.caption)
-    //                .foregroundColor(.secondary)
-    //
-    //            }
-    //            .padding()
-    //            .background(
-    //                RoundedRectangle(cornerRadius: 18)
-    //                    .fill(.ultraThinMaterial)
-    //            )
-    //        }
-    //    }}
-    private struct PostRow: View {
-        
-        let post: ProductModel
-        @State private var isBookmarked = false   // مؤقت
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                
-                ZStack(alignment: .topTrailing) {
-                    
-                    Image(uiImage: post.image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 180)
-                        .clipped()
-                        .cornerRadius(16)
-                    
-                    // Bookmark
-                    Button {
-                        isBookmarked.toggle()
-                    } label: {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .padding(8)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .padding(10)
-                    
-                    // Gluten label
-                    Text(post.isGlutenFree ? "Gluten-Free" : "Contains Gluten")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(post.isGlutenFree ? Color.grn : Color.rd)
-                        .cornerRadius(8)
-                        .foregroundStyle(.primary)
-                        .padding(10)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                }
-                
-                // Product name
-                Text(post.productName)
-                    .font(.headline)
-                HStack {
-                // Rating only
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.yellow)
-                    
-                    Text(String(format: "%.1f", post.rating))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                
-                // Price + Location (icons احترافية)
-                    Label(post.location, systemImage: "mappin.and.ellipse")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-        }
-    }}
 
-#Preview {
-    HomeView()
+    private func categoryChip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(selected ? AppColors.teal : AppColors.card)
+                .foregroundStyle(selected ? AppColors.navy : AppColors.textPrimary)
+                .cornerRadius(12)
+        }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private struct PostRow: View {
+    let post: ProductModel
+    var onSave: (String) -> Void
+    @EnvironmentObject var cloudVM: UserCloudVM
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack(alignment: .topTrailing) {
+                Image(uiImage: post.image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 180)
+                    .clipped()
+                    .cornerRadius(16)
+
+                Button {
+                    onSave(post.id)
+                } label: {
+                    Image(systemName: cloudVM.isSaved(post.id) ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppColors.textPrimary)
+                        .padding(8)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.borderless)
+                .padding(10)
+                .accessibilityLabel(
+                    cloudVM.isSaved(post.id)
+                    ? L10n.t("Remove from saved", ar: "إزالة من المحفوظات")
+                    : L10n.t("Save post", ar: "حفظ المنشور")
+                )
+            }
+
+            Text(post.productName)
+                .font(.headline)
+                .foregroundStyle(AppColors.textPrimary)
+
+            HStack(spacing: 8) {
+                if post.verificationStatus == .verified {
+                    Label(L10n.t("Verified Product", ar: "منتج موثّق"), systemImage: "checkmark.seal.fill")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(AppColors.teal)
+                        .accessibilityLabel(L10n.t("Verified Product", ar: "منتج موثّق"))
+                }
+                Text(post.glutenCardLabel)
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppColors.teal.opacity(0.18))
+                    .clipShape(Capsule())
+                    .accessibilityLabel(post.glutenAnalysisStatus.fullLabel)
+            }
+
+            if !post.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("Found at", ar: "تم العثور عليه في"))
+                        .font(.caption2)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Text(post.location)
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textPrimary)
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppColors.card)
+        )
+    }
 }

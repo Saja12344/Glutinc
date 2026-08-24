@@ -53,13 +53,11 @@ struct ProfileContentView: View {
                     }
                 }
 
-                // المحتوى
-                LazyVGrid(
-                    columns: [GridItem(.flexible()), GridItem(.flexible())],
-                    spacing: 20
-                ) {
-                    if selectedSegment == 1 {
-                        // Posts
+                if selectedSegment == 1 {
+                    LazyVGrid(
+                        columns: [GridItem(.flexible()), GridItem(.flexible())],
+                        spacing: 20
+                    ) {
                         ForEach(vm.myPosts, id: \.id) { post in
                             Image(uiImage: post.image)
                                 .resizable()
@@ -68,19 +66,35 @@ struct ProfileContentView: View {
                                 .clipped()
                                 .cornerRadius(14)
                         }
-                    } else {
-                        // Saved
-                        ForEach(vm.user.savedImages, id: \.self) { img in
-                            Image(img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(height: 140)
-                                .clipped()
-                                .cornerRadius(14)
+                    }
+                    .padding(.horizontal)
+                } else {
+                    LazyVGrid(
+                        columns: [GridItem(.flexible()), GridItem(.flexible())],
+                        spacing: 20
+                    ) {
+                        ForEach(vm.savedProducts) { post in
+                            NavigationLink {
+                                ProductDetailView(post: post)
+                            } label: {
+                                Image(uiImage: post.image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 140)
+                                    .clipped()
+                                    .cornerRadius(14)
+                            }
                         }
                     }
+                    .padding(.horizontal)
+
+                    if vm.savedProducts.isEmpty {
+                        Text(L10n.t("Saved posts appear here after you sign in and bookmark them.", ar: "تظهر المنشورات المحفوظة هنا بعد تسجيل الدخول وحفظها."))
+                            .font(.footnote)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .padding()
+                    }
                 }
-                .padding(.horizontal)
 
                 Spacer()
             }
@@ -129,34 +143,17 @@ struct SignInGateView: View {
 
     var body: some View {
         ZStack {
+            BackgroundView()
 
-            // خلفية خفيفة بدل السواد الثقيل
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-
-            VStack(spacing: 24) {
-
-                Text("Sign in to access your profile")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-
-                SignInWithAppleButton(
-                    .signIn,
-                    onRequest: { request in
-                        request.requestedScopes = [.fullName, .email]
-                    },
-                    onCompletion: vm.handleSignIn
+            SignInPromptView(
+                title: L10n.t("Sign in to access your profile", ar: "سجّل الدخول للوصول إلى ملفك"),
+                message: L10n.t(
+                    "Saving posts and managing your account requires Sign in with Apple.",
+                    ar: "حفظ المنشورات وإدارة حسابك يتطلبان تسجيل الدخول باستخدام Apple."
                 )
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 50)
-                .cornerRadius(12)
-            }
-            .padding()
-            .background(.ultraThinMaterial)
-            .cornerRadius(20)
-            .padding(.horizontal, 24)
+            )
         }
+        .preferredColorScheme(.dark)
     }
 }
 

@@ -43,6 +43,37 @@ final class UserCloudVM: ObservableObject {
     @Published var products: [ProductModel] = []
     @Published var hasLoadedProducts = false
     @Published var userRecordID: String?
+    @Published var blockedUserIDs: Set<String> = []
+    @Published var savedProductIDs: Set<String> = []
+    @Published var isDeletingAccount = false
+    @Published var reports: [ModerationReport] = []
+    @Published var pendingAuthAction: AuthGatedAction?
+
+    enum AuthGatedAction: Equatable {
+        case save(productID: String)
+        case post
+        case report
+        case none
+    }
+
+    var isSignedIn: Bool { signedUser != nil }
+
+    var visibleProducts: [ProductModel] {
+        products.filter { !blockedUserIDs.contains($0.ownerAppleID) && $0.ownerAppleID != "deleted" }
+    }
+
+    var exploreProducts: [ProductModel] {
+        visibleProducts.filter(\.isEligibleForExplore)
+    }
+
+    var isAdmin: Bool {
+        guard let id = signedUser?.id else { return false }
+        return AppConfig.adminAppleIDs.contains(id)
+    }
+
+    var savedProducts: [ProductModel] {
+        visibleProducts.filter { savedProductIDs.contains($0.id) }
+    }
 
 
     private let userDefaultsKey = "loggedInUserId"
@@ -91,13 +122,84 @@ final class UserCloudVM: ObservableObject {
 
     func loadProductsFromCloud() {
         ck.fetchProducts { fetched in
-            print("📥 Cloud fetch count:", fetched.count)
-
             if !fetched.isEmpty {
                 self.products = fetched
-            } else {
-                print("⚠️ Fetch returned 0 – keeping existing data")
             }
+        }
+    }
+
+    func loadExploreProducts() {
+        ck.fetchExploreProducts { fetched in
+            let blocked = self.blockedUserIDs
+            let explore = fetched.filter { !blocked.contains($0.ownerAppleID) }
+            let others = self.products.filter { !$0.isEligibleForExplore }
+            var merged = explore
+            for item in others where !merged.contains(where: { $0.id == item.id }) {
+                merged.append(item)
+            }
+            self.products = merged
+            self.hasLoadedProducts = true
+        }
+    }
+
+    func submitCatalogProduct(_ product: ProductModel, completion: @escaping (Bool, String?) -> Void) {
+        if let existing = ProductValidator.existingMatch(
+            barcode: product.barcode,
+            name: product.productName,
+            in: products
+        ) {
+            completion(false, L10n.t(
+                "This product already exists. Opening the existing listing instead of creating a duplicate.",
+                ar: "هذا المنتج موجود مسبقًا. سيتم استخدام السجل الحالي بدل إنشاء نسخة مكررة."
+            ))
+            return
+        }
+        ck.saveProduct(product) { success in
+            if success {
+                self.products.insert(product, at: 0)
+            }
+            completion(success, nil)
+        }
+    }
+
+    func moderateProduct(
+        _ product: ProductModel,
+        verification: VerificationStatus,
+        gluten: GlutenAnalysisStatus? = nil,
+        completion: @escaping (Bool) -> Void = { _ in }
+    ) {
+        guard let recordName = product.recordName else {
+            completion(false)
+            return
+        }
+        ck.updateProductVerification(
+            recordName: recordName,
+            status: verification,
+            gluten: gluten,
+            verifiedBy: signedUser?.id
+        ) { ok in
+            if ok, let index = self.products.firstIndex(where: { $0.id == product.id }) {
+                self.products[index].verificationStatusRaw = verification.rawValue
+                self.products[index].verifiedBy = self.signedUser?.id
+                self.products[index].lastVerifiedAt = Date()
+                if let gluten {
+                    self.products[index].glutenAnalysisStatusRaw = gluten.rawValue
+                }
+            }
+            completion(ok)
+        }
+    }
+
+    func refreshReports() {
+        ck.fetchReports { reports in
+            self.reports = reports
+        }
+    }
+
+    func setReportStatus(_ report: ModerationReport, status: String, completion: @escaping (Bool) -> Void) {
+        ck.updateReportStatus(recordName: report.recordName, status: status, reviewer: signedUser?.id ?? "admin") { ok in
+            if ok { self.refreshReports() }
+            completion(ok)
         }
     }
     
@@ -145,10 +247,9 @@ final class UserCloudVM: ObservableObject {
 
             self.user.appleID = id
 
-            // تحميل المنتجات
             self.loadProductsFromCloud()
             self.hasLoadedProducts = true
-
+            self.loadModerationState()
             self.saveUserSession(user: self.signedUser!)
 
             // 2️⃣ التعامل مع CloudKit
@@ -268,9 +369,9 @@ final class UserCloudVM: ObservableObject {
 
             self.signedUser = AppUser(id: id, name: name, email: email)
 
-            // ⬅️ مهم جدًا
             self.loadProductsFromCloud()
             self.hasLoadedProducts = true
+            self.loadModerationState()
             
             Task {
                 if let profile = try? await ck.fetchUserProfile(by: id) {
@@ -288,52 +389,102 @@ final class UserCloudVM: ObservableObject {
     func logout() {
         signedUser = nil
         user = UserModel()
+        userRecordID = nil
+        blockedUserIDs = []
+        savedProductIDs = []
+        pendingAuthAction = nil
 
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.removeObject(forKey: "\(userDefaultsKey)_name")
         UserDefaults.standard.removeObject(forKey: "\(userDefaultsKey)_email")
-
-        print("✅ تم تسجيل الخروج ومسح الجلسة")
     }
 
-    // MARK: - ☁️ حذف المستخدم من CloudKit
-    func deleteUserFromCloud() {
+    func loadModerationState() {
+        guard isSignedIn else { return }
+        ck.fetchBlockedUserIDs { ids in
+            self.blockedUserIDs = Set(ids)
+        }
+        ck.fetchSavedProductIDs { ids in
+            self.savedProductIDs = Set(ids)
+        }
+    }
 
-        guard let recordName = userRecordID else {
-            print("❌ لا يوجد userRecordID")
+    @discardableResult
+    func requireSignIn(for action: AuthGatedAction) -> Bool {
+        if isSignedIn { return true }
+        pendingAuthAction = action
+        return false
+    }
+
+    func toggleSave(productID: String) {
+        guard requireSignIn(for: .save(productID: productID)) else { return }
+        if savedProductIDs.contains(productID) {
+            savedProductIDs.remove(productID)
+            ck.removeBookmark(productID: productID) { _ in }
+        } else {
+            savedProductIDs.insert(productID)
+            ck.saveBookmark(productID: productID) { _ in }
+        }
+    }
+
+    func isSaved(_ productID: String) -> Bool {
+        savedProductIDs.contains(productID)
+    }
+
+    func reportContent(_ draft: ContentReportDraft, completion: @escaping (Bool) -> Void) {
+        guard requireSignIn(for: .report) else {
+            completion(false)
+            return
+        }
+        ck.saveReport(draft, completion: completion)
+    }
+
+    func reportIncorrectProduct(
+        productID: String,
+        reason: ProductCorrectionReason,
+        details: String,
+        completion: @escaping (Bool) -> Void
+    ) {
+        guard let reporter = signedUser?.id ?? userRecordID else {
+            pendingAuthAction = .report
+            completion(false)
+            return
+        }
+        ck.saveProductCorrection(
+            productID: productID,
+            reporterUserId: reporter,
+            reason: reason,
+            details: details,
+            completion: completion
+        )
+    }
+
+    func blockUser(userId: String) {
+        guard isSignedIn, !userId.isEmpty, userId != signedUser?.id else { return }
+        blockedUserIDs.insert(userId)
+        ck.blockUser(blockedUserId: userId) { _ in }
+    }
+
+    // MARK: - 🗑️ حذف الحساب
+    func deleteAccount(completion: @escaping (Bool) -> Void) {
+        guard let appleID = signedUser?.id ?? (user.appleID.isEmpty ? nil : user.appleID) else {
+            logout()
+            completion(true)
             return
         }
 
-        let recordID = CKRecord.ID(recordName: recordName)
-        let database = CKContainer(identifier: "iCloud.com.sga.Glutinc")
-            .privateCloudDatabase
-
-        database.delete(withRecordID: recordID) { _, error in
-            if let error = error {
-                print("❌ فشل حذف المستخدم من CloudKit:", error.localizedDescription)
-            } else {
-                print("☁️ تم حذف المستخدم من CloudKit")
+        isDeletingAccount = true
+        ck.anonymizeProducts(ownerAppleID: appleID) { _ in
+            Task {
+                await self.ck.deleteAllPrivateRecords(ofType: "SavedProduct")
+                await self.ck.deleteAllPrivateRecords(ofType: "BlockedUser")
+                self.ck.deleteUserProfile(appleID: appleID) { _ in
+                    self.isDeletingAccount = false
+                    self.logout()
+                    completion(true)
+                }
             }
         }
-    }
-
-
-
-
-    // MARK: - 🗑️ حذف الحساب
-    func deleteAccount() {
-
-        deleteUserFromCloud()
-
-        signedUser = nil
-        user = UserModel()
-        userRecordID = nil
-
-        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
-        UserDefaults.standard.removeObject(forKey: "\(userDefaultsKey)_name")
-        UserDefaults.standard.removeObject(forKey: "\(userDefaultsKey)_email")
-
-        print("🗑️ تم حذف الحساب محليًا")
     }
 
 

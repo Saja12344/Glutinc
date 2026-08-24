@@ -214,7 +214,6 @@ struct SettingsView: View {
     @State private var nameDraft = ""
     @State private var pickerItem: PhotosPickerItem?
     @State private var showSignOutConfirm = false
-    @State private var showDeleteConfirm = false
 
     private var isAR: Bool {
         Locale.preferredLanguages.first?.hasPrefix("ar") == true
@@ -273,19 +272,70 @@ struct SettingsView: View {
 //                        }
 //                    }
 
-                    // MARK: - Privacy
-                    SectioHeader(title: NSLocalizedString("Privacy", comment: ""))
+                    // MARK: - About & Legal
+                    SectioHeader(title: L10n.t("About", ar: "حول التطبيق"))
+
+                    if vm.isAdmin {
+                        NavigationLink {
+                            AdminModerationView()
+                        } label: {
+                            SettingRowContent(
+                                icon: "shield.checkered",
+                                title: L10n.t("Reports", ar: "البلاغات")
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     NavigationLink {
-                        PrivacyView()
+                        AboutGlutincView()
+                    } label: {
+                        SettingRowContent(
+                            icon: "info.circle",
+                            title: L10n.t("About", ar: "حول التطبيق")
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        LegalHubView()
+                    } label: {
+                        SettingRowContent(
+                            icon: "building.columns",
+                            title: L10n.t("Legal", ar: "قانوني")
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        PrivacyPolicyView()
                     } label: {
                         SettingRowContent(
                             icon: "hand.raised.fill",
-                            title: NSLocalizedString("Privacy Policy", comment: "")
+                            title: L10n.t("Privacy Policy", ar: "سياسة الخصوصية")
                         )
                     }
-                    .buttonStyle(.plain)   // ⭐ مهم جدًا عشان يحافظ على التصميم
+                    .buttonStyle(.plain)
 
+                    NavigationLink {
+                        HealthDisclaimerView()
+                    } label: {
+                        SettingRowContent(
+                            icon: "heart.text.clipboard",
+                            title: L10n.t("Health Information", ar: "معلومات صحية")
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        SupportView()
+                    } label: {
+                        SettingRowContent(
+                            icon: "envelope",
+                            title: L10n.t("Contact / Support", ar: "التواصل والدعم")
+                        )
+                    }
+                    .buttonStyle(.plain)
 
                     // MARK: - Danger Zone
                     SectioHeader(title: NSLocalizedString("Danger Zone", comment: ""))
@@ -301,8 +351,8 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button {
-                        showDeleteConfirm = true
+                    NavigationLink {
+                        DeleteAccountView()
                     } label: {
                         SettingRowContent(
                             icon: "trash.fill",
@@ -312,33 +362,14 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
-                    
-                    
-                    
-                    
-                    .confirmationDialog(
-                        NSLocalizedString("Are you sure?", comment: ""),
-                        isPresented: $showDeleteConfirm,
-                        titleVisibility: .visible
-                    ) {
-                        Button(
-                            NSLocalizedString("Delete Account", comment: ""),
-                            role: .destructive
-                        ) {
-                            vm.deleteAccount()   // أو حطيه TODO
-                        }
-
-                        Button(NSLocalizedString("Cancel", comment: ""), role: .cancel) {}
-                    }
-
-                    
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 40)
             }
         }
         .navigationTitle(NSLocalizedString("Settings", comment: ""))
-        .navigationBarTitleDisplayMode(.inline)   // ⭐ هذا يحل مشكلة العنوان
+        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(.dark)
         .environment(\.layoutDirection, isAR ? .rightToLeft : .leftToRight)
 
         // Sign out alert
@@ -415,7 +446,7 @@ struct SettingRowContent: View {
       
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
+                .fill(AppColors.card)
         )
 
     }

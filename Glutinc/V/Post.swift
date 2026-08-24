@@ -11,6 +11,13 @@ struct Post: View {
 
     // ✅ القيمة الجاية من ResultView
     let isGlutenFree: Bool
+    var detectedIngredientNames: [String]
+    var analysisStatus: ScanAnalysisStatus = .noneDetected
+    var manufacturerWarnings: [String] = []
+    var initialImage: UIImage? = nil
+    var barcode: String? = nil
+    var ingredientText: String = ""
+    var evidence: ProductEvidence? = nil
     
     // ✅ مدخلات الصفحة (required)
     @State private var productName = ""
@@ -29,6 +36,8 @@ struct Post: View {
     // ✅ حالة الفاليديشن / النشر
     @State private var showValidation = false
     @State private var isSubmitting = false
+    @State private var submitMessage: String?
+    @State private var existingMatch: ProductModel?
     
     // ✅ شاشة اختيار اللوكيشن (لو حبيتي تطوريها لاحقًا)
     @State private var showLocationSearch = false
@@ -39,31 +48,13 @@ struct Post: View {
     private var isFormValid: Bool {
         selectedImage != nil &&
         !productName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !price.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !location.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !selectedCategory.isEmpty &&
-        cloudVM.rating > 0
+        !selectedCategory.isEmpty
     }
-//    let ingredients: [GlutenIngredient]
-    var detectedIngredientNames: [String]
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // ✅ الخلفية المتفق عليها
-                Color(colorScheme == .dark ? .black : .white)
-                    .ignoresSafeArea()
-                
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.12, green: 0.48, blue: 0.95)
-                            .opacity(colorScheme == .dark ? 0.35 : 0.55),
-                        Color.clear
-                    ],
-                    startPoint: .topTrailing,
-                    endPoint: .center
-                )
-                .ignoresSafeArea()
+                BackgroundView()
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -163,7 +154,7 @@ struct Post: View {
                             showLocationSearch = true
                         } label: {
                             HStack {
-                                Text(location.isEmpty ? "Search location" : location)
+                                Text(location.isEmpty ? L10n.t("Found at (optional)", ar: "تم العثور عليه في (اختياري)") : location)
                                     .font(.body)
                                     .foregroundColor(location.isEmpty ? .secondary : .primary)
                                     .lineLimit(1)
@@ -171,7 +162,7 @@ struct Post: View {
                             }
                         }
                         .formField(
-                            isInvalid: showValidation && location.trimmingCharacters(in: .whitespaces).isEmpty,
+                            isInvalid: false,
                             isEditing: !location.isEmpty
                         )
                         
@@ -232,6 +223,13 @@ struct Post: View {
                             glassTextField("Product link (optional)", text: $productURL, keyboardType: .URL)
                         }
                         
+                        Text(L10n.t(
+                            "Community content is shared by users and is not medical advice.",
+                            ar: "محتوى المجتمع يشاركه المستخدمون ولا يُعد استشارة طبية."
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(AppColors.textSecondary)
+
                         // MARK: - Publish Button
                         Button {
                             showValidation = true
@@ -241,11 +239,8 @@ struct Post: View {
                             
                             uploadProductToCloud { success in
                                 isSubmitting = false
-                                
                                 if success {
-                                    selectedTab = .wheat   // ✅ يروح للهوم
-                                } else {
-                                    print("❌ فشل حفظ المنتج")
+                                    selectedTab = .wheat
                                 }
                             }
                             
@@ -262,6 +257,19 @@ struct Post: View {
                         }
                         .disabled(!isFormValid || isSubmitting)
                         .padding(.top, 8)
+
+                        Text(L10n.t(
+                            "Submissions start as pending. Explore only shows verified products with no gluten ingredients detected.",
+                            ar: "تبدأ الطلبات بحالة انتظار. تظهر في Explore فقط المنتجات الموثّقة التي لم يُكتشف فيها غلوتين."
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(AppColors.textSecondary)
+
+                        if let submitMessage {
+                            Text(submitMessage)
+                                .font(.footnote)
+                                .foregroundStyle(AppColors.warning)
+                        }
                         
                     }
                     .padding(16)
@@ -281,8 +289,11 @@ struct Post: View {
                  }   // 🔚 نهاية NavigationStack
         
         
-            .navigationTitle("New Post")
-            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if selectedImage == nil {
+                    selectedImage = initialImage
+                }
+            }
 
             
         
@@ -315,18 +326,51 @@ struct Post: View {
     // MARK: - النشر (أضفت notes + productURL لو حبيتي)
     func uploadProductToCloud(completion: @escaping (Bool) -> Void) {
         guard let ownerID = cloudVM.userRecordID else {
-            print("❌ No userRecordID – cannot upload product")
+            completion(false)
+            return
+        }
+        guard let image = selectedImage else {
             completion(false)
             return
         }
 
+        let evidence = self.evidence ?? ProductValidator.evidence(
+            image: image,
+            extractedText: ingredientText,
+            analysis: ScanAnalyzer.analyze(text: ingredientText, ocrConfidence: nil),
+            knownBarcodes: barcode.map { [$0] } ?? []
+        )
 
-        print("🆔 Uploading with ownerID:", ownerID)
-
-        guard let image = selectedImage else {
-            print("❌ Image is required")
+        guard evidence.isLikelyFoodProduct else {
+            submitMessage = evidence.rejectionMessage
             completion(false)
             return
+        }
+
+        if let match = ProductValidator.existingMatch(
+            barcode: evidence.barcode ?? barcode,
+            name: productName,
+            in: cloudVM.products
+        ) {
+            existingMatch = match
+            submitMessage = L10n.t(
+                "This product already exists. A duplicate listing was not created.",
+                ar: "هذا المنتج موجود مسبقًا. لم يُنشأ سجل مكرر."
+            )
+            completion(false)
+            return
+        }
+
+        let gluten = analysisStatus.catalogGlutenStatus
+        var verification: VerificationStatus = .pending
+        var verifiedBy: String? = nil
+        var verifiedAt: Date? = nil
+        if evidence.isStrongEvidence && gluten == .noGlutenDetected {
+            verification = .verified
+            verifiedBy = "auto"
+            verifiedAt = Date()
+        } else if gluten == .noGlutenDetected {
+            verification = .needsReview
         }
 
         let product = ProductModel(
@@ -334,7 +378,7 @@ struct Post: View {
             productName: productName,
             username: cloudVM.user.name,
             rating: Double(cloudVM.rating),
-            isGlutenFree: isGlutenFree,
+            isGlutenFree: gluten == .noGlutenDetected,
             price: price,
             location: location,
             category: selectedCategory,
@@ -342,11 +386,26 @@ struct Post: View {
             notes: notes.isEmpty ? nil : notes,
             productURL: productURL.isEmpty ? nil : productURL,
             image: image,
-            ownerAppleID: ownerID
+            ownerAppleID: ownerID,
+            analysisStatusRaw: analysisStatus.rawValue,
+            createdAt: Date(),
+            dataSource: "community",
+            manufacturerWarnings: manufacturerWarnings,
+            lastVerifiedAt: verifiedAt,
+            barcode: evidence.barcode ?? barcode,
+            ingredientText: ingredientText.isEmpty ? nil : ingredientText,
+            verificationStatusRaw: verification.rawValue,
+            glutenAnalysisStatusRaw: gluten.rawValue,
+            verifiedBy: verifiedBy,
+            ingredientCount: evidence.recognizedIngredientCount
         )
 
-
-        cloudVM.uploadProduct(product, completion: completion)
+        cloudVM.submitCatalogProduct(product) { success, message in
+            if let message {
+                submitMessage = message
+            }
+            completion(success)
+        }
     }
 
 

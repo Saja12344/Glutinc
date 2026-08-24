@@ -1,15 +1,22 @@
 import SwiftUI
 
 struct ProductDetailView: View {
-
     let post: ProductModel
+    @EnvironmentObject var vm: UserCloudVM
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var showSignIn = false
+    @State private var showReport = false
+    @State private var showCorrection = false
+    @State private var showBlockConfirm = false
+    @State private var selectedReportReason: ReportReason = .other
+    @State private var selectedCorrection: ProductCorrectionReason = .other
+    @State private var detailsText = ""
+    @State private var feedback: String?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-
-            VStack(alignment: .leading, spacing: 20) {
-
-                // MARK: - Image
+            VStack(alignment: .leading, spacing: 18) {
                 Image(uiImage: post.image)
                     .resizable()
                     .scaledToFill()
@@ -17,124 +24,366 @@ struct ProductDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .padding(.horizontal)
                     .padding(.top, 12)
+                    .accessibilityLabel(post.productName)
 
-                // MARK: - Header
                 VStack(alignment: .leading, spacing: 10) {
-
                     Text(post.productName)
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(AppColors.textPrimary)
 
-                    HStack(spacing: 8) {
-                        Label(
-                            post.isGlutenFree ? "Gluten-Free" : "Contains Gluten",
-                            systemImage: post.isGlutenFree
-                                ? "checkmark.seal.fill"
-                                : "exclamationmark.triangle.fill"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(post.isGlutenFree ? Color.grn : Color.rd)
-                        .clipShape(Capsule())
-
-                        Spacer()
-
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.yellow)
-                            Text(String(format: "%.1f", post.rating))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
+                    if post.verificationStatus == .verified {
+                        Label(L10n.t("Verified Product", ar: "منتج موثّق"), systemImage: "checkmark.seal.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppColors.teal)
+                            .accessibilityLabel(L10n.t("Verified Product", ar: "منتج موثّق"))
+                    } else {
+                        Text(post.verificationStatus.title)
+                            .font(.subheadline)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .accessibilityLabel(post.verificationStatus.title)
                     }
 
-                    HStack {
-                        Label(post.price, systemImage: "tag")
-                        Spacer()
-                        Label(post.location, systemImage: "mappin.and.ellipse")
+                    Label(post.isCertifiedGlutenFree
+                          ? L10n.t("Certified Gluten-Free", ar: "معتمد كمنتج خالٍ من الغلوتين")
+                          : post.glutenAnalysisStatus.fullLabel,
+                          systemImage: post.glutenAnalysisStatus.iconName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppColors.textPrimary)
+                        .accessibilityLabel(post.glutenAnalysisStatus.fullLabel)
+
+                    if post.glutenAnalysisStatus == .noGlutenDetected {
+                        Text(L10n.t(
+                            "This result is based on the available ingredient information and is not a guarantee that the product is gluten-free. Always check the current product label and manufacturer information.",
+                            ar: "تعتمد هذه النتيجة على معلومات المكونات المتاحة ولا تضمن أن المنتج خالٍ من الغلوتين. تحقق دائمًا من ملصق المنتج الحالي ومعلومات الشركة المصنعة."
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(AppColors.textSecondary)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal)
 
-                Divider()
-                    .padding(.horizontal)
-                    .onAppear {
-                        print("🧪 detectedIngredients:", post.detectedIngredients)
-                        print("🧪 notes:", post.notes ?? "nil")
-                        print("🧪 productURL:", post.productURL ?? "nil")
-                    }
+                whyThisResult
 
-                // MARK: - Detected Ingredients
-                if !post.detectedIngredients.isEmpty {
-                    sectionContainer(title: "Detected Ingredients", icon: "leaf") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(post.detectedIngredients, id: \.self) { ingredient in
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(post.isGlutenFree ? Color.grn : Color.rd)
-                                        .frame(width: 6, height: 6)
-
-                                    Text(ingredient)
-                                        .font(.body)
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                        }
-                    }
-                }
-
-
-                // MARK: - Notes
-                if let notes = post.notes, !notes.isEmpty {
-                    sectionContainer(title: "Notes", icon: "note.text") {
-                        Text(notes)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                    }
-                }
-
-                // MARK: - Product Link
-                if let link = post.productURL,
-                   let url = URL(string: link) {
-
-                    sectionContainer(title: "Product Link", icon: "link") {
-                        Link(link, destination: url)
-                            .font(.body)
-                            .foregroundStyle(.blue)
-                            .lineLimit(2)
-                    }
-                }
+                ingredientsSection
+                manufacturerSection
+                productInfoSection
+                foundAtSection
+                communityNoteSection
+                verificationSection
             }
             .padding(.bottom, 32)
         }
-        .navigationTitle("Details")
+        .background(BackgroundView())
+        .navigationTitle(L10n.t("Details", ar: "التفاصيل"))
         .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(.dark)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        guard vm.isSignedIn else {
+                            _ = vm.requireSignIn(for: .report)
+                            showSignIn = true
+                            return
+                        }
+                        showCorrection = true
+                    } label: {
+                        Label(L10n.t("Report incorrect information", ar: "الإبلاغ عن معلومات غير صحيحة"), systemImage: "flag")
+                    }
+                    Button {
+                        guard vm.isSignedIn else {
+                            _ = vm.requireSignIn(for: .report)
+                            showSignIn = true
+                            return
+                        }
+                        showReport = true
+                    } label: {
+                        Label(L10n.t("Report user / community content", ar: "الإبلاغ عن مستخدم أو محتوى مجتمع"), systemImage: "exclamationmark.bubble")
+                    }
+                    if !post.ownerAppleID.isEmpty, post.ownerAppleID != vm.signedUser?.id {
+                        Button(role: .destructive) {
+                            guard vm.isSignedIn else {
+                                showSignIn = true
+                                return
+                            }
+                            showBlockConfirm = true
+                        } label: {
+                            Label(L10n.t("Block user", ar: "حظر المستخدم"), systemImage: "hand.raised")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel(L10n.t("More actions", ar: "المزيد"))
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    if vm.isSignedIn {
+                        vm.toggleSave(productID: post.id)
+                    } else {
+                        _ = vm.requireSignIn(for: .save(productID: post.id))
+                        showSignIn = true
+                    }
+                } label: {
+                    Image(systemName: vm.isSaved(post.id) ? "bookmark.fill" : "bookmark")
+                }
+                .accessibilityLabel(L10n.t("Save post", ar: "حفظ المنشور"))
+            }
+        }
+        .sheet(isPresented: $showSignIn) { signInSheet }
+        .sheet(isPresented: $showReport) { reportSheet }
+        .sheet(isPresented: $showCorrection) { correctionSheet }
+        .confirmationDialog(
+            L10n.t("Block this user?", ar: "حظر هذا المستخدم؟"),
+            isPresented: $showBlockConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.t("Block", ar: "حظر"), role: .destructive) {
+                vm.blockUser(userId: post.ownerAppleID)
+                dismiss()
+            }
+            Button(L10n.t("Cancel", ar: "إلغاء"), role: .cancel) {}
+        }
+        .onChange(of: vm.isSignedIn) { signedIn in
+            if signedIn, case .save(let id) = vm.pendingAuthAction, id == post.id {
+                vm.pendingAuthAction = nil
+                showSignIn = false
+                vm.toggleSave(productID: id)
+            }
+        }
     }
 
-    // MARK: - Section Container
+    private var whyThisResult: some View {
+        sectionContainer(title: L10n.t("Why this result?", ar: "لماذا ظهرت هذه النتيجة؟"), icon: "text.magnifyingglass") {
+            VStack(alignment: .leading, spacing: 8) {
+                if post.ingredientCount > 0 {
+                    Text("\(post.ingredientCount) " + L10n.t("ingredients analyzed", ar: "مكوّنًا تم تحليلها"))
+                }
+                Text(post.glutenAnalysisStatus.fullLabel)
+                if post.glutenAnalysisStatus == .containsGluten, !post.detectedIngredients.isEmpty {
+                    Text(L10n.t("Gluten-containing ingredients detected:", ar: "مكونات تحتوي على الغلوتين:"))
+                    ForEach(post.detectedIngredients, id: \.self) { item in
+                        Text("• \(item)")
+                    }
+                } else if post.glutenAnalysisStatus == .uncertain {
+                    Text(L10n.t("Some ingredients could not be confidently classified.", ar: "تعذر تصنيف بعض المكونات بشكل مؤكد."))
+                }
+                if post.manufacturerWarnings.isEmpty {
+                    Text(L10n.t("No manufacturer warning available", ar: "لا يتوفر تحذير من الشركة المصنعة"))
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                if let date = post.lastVerifiedAt {
+                    Text(L10n.t("Last verified", ar: "آخر توثيق") + ": " + date.formatted(date: .abbreviated, time: .omitted))
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(AppColors.textPrimary)
+        }
+    }
+
+    @ViewBuilder
+    private var ingredientsSection: some View {
+        if let text = post.ingredientText, !text.isEmpty {
+            sectionContainer(title: L10n.t("Ingredients", ar: "المكونات"), icon: "list.bullet") {
+                Text(text)
+                    .font(.footnote)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .textSelection(.enabled)
+            }
+        } else if !post.detectedIngredients.isEmpty {
+            sectionContainer(title: L10n.t("Ingredients", ar: "المكونات"), icon: "list.bullet") {
+                ForEach(post.detectedIngredients, id: \.self) { item in
+                    Text("• \(item)").foregroundStyle(AppColors.textPrimary)
+                }
+            }
+        } else {
+            sectionContainer(title: L10n.t("Ingredients", ar: "المكونات"), icon: "list.bullet") {
+                Text(L10n.t("No ingredients available", ar: "لا تتوفر مكونات"))
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var manufacturerSection: some View {
+        if !post.manufacturerWarnings.isEmpty {
+            sectionContainer(title: L10n.t("Manufacturer warnings", ar: "تحذيرات الشركة المصنعة"), icon: "exclamationmark.triangle") {
+                Text(L10n.t(
+                    "These warnings are separate from ingredient detection. Missing warnings do not prove the product is free from cross-contact.",
+                    ar: "هذه التحذيرات منفصلة عن تحليل المكونات. غيابها لا يثبت خلو المنتج من التلوث التبادلي."
+                ))
+                .font(.footnote)
+                .foregroundStyle(AppColors.textSecondary)
+                ForEach(post.manufacturerWarnings, id: \.self) { warning in
+                    Text("• \(warning)").foregroundStyle(AppColors.warning)
+                }
+            }
+        }
+    }
+
+    private var productInfoSection: some View {
+        sectionContainer(title: L10n.t("Product information", ar: "معلومات المنتج"), icon: "info.circle") {
+            labeledRow(L10n.t("Category", ar: "التصنيف"), post.category)
+            if !post.price.trimmingCharacters(in: .whitespaces).isEmpty {
+                labeledRow(L10n.t("Price", ar: "السعر"), post.price)
+            }
+            if let barcode = post.barcode, !barcode.isEmpty {
+                labeledRow(L10n.t("Barcode", ar: "الباركود"), barcode)
+            }
+            if post.rating > 0 {
+                labeledRow(L10n.t("Contributor rating", ar: "تقييم المساهم"), String(format: "%.0f / 5", post.rating))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var foundAtSection: some View {
+        if !post.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            sectionContainer(title: L10n.t("Found at", ar: "تم العثور عليه في"), icon: "mappin.and.ellipse") {
+                Text(post.location).foregroundStyle(AppColors.textPrimary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var communityNoteSection: some View {
+        if let notes = post.notes, !notes.isEmpty {
+            sectionContainer(title: L10n.t("Community note", ar: "ملاحظة من المجتمع"), icon: "text.quote") {
+                Text(notes).foregroundStyle(AppColors.textPrimary)
+                Text("@\(post.username)")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                Text(L10n.t("Community content is shared by users and is not medical advice.", ar: "محتوى المجتمع يشاركه المستخدمون ولا يُعد استشارة طبية."))
+                    .font(.footnote)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+    }
+
+    private var verificationSection: some View {
+        sectionContainer(title: L10n.t("Verification information", ar: "معلومات التوثيق"), icon: "checkmark.seal") {
+            labeledRow(L10n.t("Status", ar: "الحالة"), post.verificationStatus.title)
+            labeledRow(L10n.t("Data source", ar: "مصدر البيانات"), post.dataSource)
+            if let date = post.lastVerifiedAt {
+                labeledRow(L10n.t("Last verified", ar: "آخر توثيق"), date.formatted(date: .abbreviated, time: .omitted))
+            }
+            if let source = post.certificationSource, post.isCertifiedGlutenFree {
+                labeledRow(L10n.t("Certification source", ar: "مصدر الاعتماد"), source)
+            }
+        }
+    }
+
+    private func labeledRow(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.caption).foregroundStyle(AppColors.textSecondary)
+            Text(value).foregroundStyle(AppColors.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 4)
+    }
+    private var signInSheet: some View {
+        ZStack {
+            AppColors.navy.ignoresSafeArea()
+            SignInPromptView().environmentObject(vm)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var reportSheet: some View {
+        NavigationStack {
+            Form {
+                Picker(L10n.t("Reason", ar: "السبب"), selection: $selectedReportReason) {
+                    ForEach(ReportReason.allCases) { reason in
+                        Text(reason.title).tag(reason)
+                    }
+                }
+                TextField(L10n.t("Additional details", ar: "تفاصيل إضافية"), text: $detailsText, axis: .vertical)
+                Button(L10n.t("Submit report", ar: "إرسال البلاغ")) {
+                    let draft = ContentReportDraft(
+                        reporterUserId: vm.signedUser?.id ?? "",
+                        reportedUserId: post.ownerAppleID,
+                        contentId: post.id,
+                        contentType: .post,
+                        reason: selectedReportReason,
+                        additionalDetails: detailsText
+                    )
+                    vm.reportContent(draft) { ok in
+                        feedback = ok
+                            ? L10n.t("Report submitted for review.", ar: "تم إرسال البلاغ للمراجعة.")
+                            : L10n.t("Could not submit the report.", ar: "تعذر إرسال البلاغ.")
+                        showReport = false
+                        detailsText = ""
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(AppColors.navy)
+            .navigationTitle(L10n.t("Report post", ar: "الإبلاغ عن المنشور"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.t("Cancel", ar: "إلغاء")) { showReport = false }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var correctionSheet: some View {
+        NavigationStack {
+            Form {
+                Picker(L10n.t("Reason", ar: "السبب"), selection: $selectedCorrection) {
+                    ForEach(ProductCorrectionReason.allCases) { reason in
+                        Text(reason.title).tag(reason)
+                    }
+                }
+                TextField(L10n.t("Additional details", ar: "تفاصيل إضافية"), text: $detailsText, axis: .vertical)
+                Button(L10n.t("Submit", ar: "إرسال")) {
+                    vm.reportIncorrectProduct(productID: post.id, reason: selectedCorrection, details: detailsText) { ok in
+                        feedback = ok
+                            ? L10n.t("Thanks. This will be reviewed and will not change trusted data automatically.", ar: "شكرًا. ستُراجع المعلومات ولن تُحدَّث البيانات المعتمدة تلقائيًا.")
+                            : L10n.t("Could not submit.", ar: "تعذر الإرسال.")
+                        showCorrection = false
+                        detailsText = ""
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(AppColors.navy)
+            .navigationTitle(L10n.t("Report incorrect information", ar: "الإبلاغ عن معلومات غير صحيحة"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.t("Cancel", ar: "إلغاء")) { showCorrection = false }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var statusColor: Color {
+        switch post.scanStatus {
+        case .glutenDetected: return AppColors.danger
+        case .reviewRecommended: return AppColors.warning
+        case .noneDetected: return AppColors.teal
+        case .unverifiable, .unreadableIngredients: return AppColors.textSecondary
+        }
+    }
+
     @ViewBuilder
     private func sectionContainer<Content: View>(
         title: String,
         icon: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-
         VStack(alignment: .leading, spacing: 10) {
-
             Label(title, systemImage: icon)
                 .font(.headline)
-                .foregroundStyle(.primary)
-
+                .foregroundStyle(AppColors.textPrimary)
             content()
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
+                .fill(AppColors.card)
         )
         .padding(.horizontal)
     }

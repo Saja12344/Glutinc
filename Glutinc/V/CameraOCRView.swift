@@ -5,6 +5,7 @@ struct CameraView: View {
     
     @StateObject private var cameraVM = CameraOCRViewModel()
     @State private var showImagePicker = false
+    @State private var showIngredientCrop = false
     @State private var capturedImage: UIImage?
     @Environment(\.layoutDirection) var layoutDirection
     @State private var isFlashOn = false
@@ -32,6 +33,10 @@ struct CameraView: View {
                             }
                     )
                 
+                IngredientFocusGuideOverlay()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+
                 VStack {
                     HStack(spacing: 12) {
 
@@ -48,7 +53,10 @@ struct CameraView: View {
                         }
 
                         // 📝 Note Card
-                        Text("Note: Focus on the ingredient list for accurate results")
+                        Text(L10n.t(
+                            "Fill the frame with the ingredient list",
+                            ar: "قرّب قائمة المكونات حتى تملأ الإطار"
+                        ))
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
@@ -64,11 +72,17 @@ struct CameraView: View {
                     }
                     .padding(.horizontal, 16)
 
-                        
-                        Spacer()
-                        FocusCornerBox()
-                        
-                        Spacer()
+                    if cameraVM.needsCaptureTips && capturedImage == nil {
+                        Text(L10n.t(
+                            "Avoid glare · Keep the text sharp · Hold the phone steady",
+                            ar: "تجنب انعكاس الإضاءة · تأكد من وضوح النص · ثبت الهاتف"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .padding(.top, 8)
+                    }
+
+                    Spacer()
                         
                         // ✅ الشريط السفلي ممتد لآخر الشاشة
                         HStack {
@@ -137,18 +151,34 @@ struct CameraView: View {
                         Spacer()
 
                         ResultView(
-                            vm: cloudVM,
                             selectedTab: $selectedTab,
                             capturedImage: $capturedImage,
+                            analysis: $cameraVM.analysis,
                             image: image,
-                            ingredients: cameraVM.glutenFound,
-                        
-                            status: cameraVM.status,
+                            evidence: cameraVM.productEvidence,
+                            onReanalyze: { cameraVM.reanalyzeEditedText($0) },
+                            onScanAgain: {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    capturedImage = nil
+                                }
+                                cameraVM.resetScanPresentation()
+                            },
+                            onChooseAnotherPhoto: {
+                                capturedImage = nil
+                                cameraVM.resetScanPresentation()
+                                showImagePicker = true
+                            },
+                            onSelectIngredientArea: cameraVM.libraryOriginalImage == nil ? nil : {
+                                showIngredientCrop = true
+                            }
                         )
+                        .environmentObject(cloudVM)
                         .frame(
-                            height: cameraVM.glutenFound.isEmpty
-                            ? UIScreen.main.bounds.height * 0.55
-                            : UIScreen.main.bounds.height * 0.65
+                            height: cameraVM.analysis.status == .unreadableIngredients
+                            ? UIScreen.main.bounds.height * 0.72
+                            : (cameraVM.glutenFound.isEmpty
+                               ? UIScreen.main.bounds.height * 0.55
+                               : UIScreen.main.bounds.height * 0.65)
                         )
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -165,10 +195,21 @@ struct CameraView: View {
             
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker { image in
-                    // صورة من الألبوم
-                    capturedImage = image
-                    cameraVM.capturedImage = image
-                    cameraVM.recognizeText(from: image)
+                    cameraVM.libraryOriginalImage = image
+                    showIngredientCrop = true
+                }
+            }
+            .fullScreenCover(isPresented: $showIngredientCrop) {
+                if let image = cameraVM.libraryOriginalImage {
+                    IngredientCropView(
+                        image: image,
+                        onCancel: { showIngredientCrop = false },
+                        onConfirm: { cropped in
+                            showIngredientCrop = false
+                            capturedImage = cropped
+                            cameraVM.recognizeCroppedLibraryImage(cropped)
+                        }
+                    )
                 }
             }
             .onChange(of: cameraVM.capturedImage) { img in
@@ -178,43 +219,28 @@ struct CameraView: View {
                 }
             }
             .navigationBarHidden(true)
+            .environmentObject(cloudVM)
         }
         
     }
-    struct FocusCornerBox: View {
+    struct IngredientFocusGuideOverlay: View {
         var body: some View {
-            ZStack {
-                // الزاوية العلوية اليسرى
-                corner
-                    .rotationEffect(.degrees(0))
-                    .offset(x: -90, y: -90)
-                
-                // الزاوية العلوية اليمنى
-                corner
-                    .rotationEffect(.degrees(90))
-                    .offset(x: 90, y: -90)
-                
-                // الزاوية السفلية اليمنى
-                corner
-                    .rotationEffect(.degrees(180))
-                    .offset(x: 90, y: 90)
-                
-                // الزاوية السفلية اليسرى
-                corner
-                    .rotationEffect(.degrees(270))
-                    .offset(x: -90, y: 90)
+            GeometryReader { geo in
+                let rect = CameraFocusGuide.previewNormalizedRect
+                let frame = CGRect(
+                    x: rect.origin.x * geo.size.width,
+                    y: rect.origin.y * geo.size.height,
+                    width: rect.size.width * geo.size.width,
+                    height: rect.size.height * geo.size.height
+                )
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.yellow, lineWidth: 3)
+                        .frame(width: frame.width, height: frame.height)
+                        .position(x: frame.midX, y: frame.midY)
+                }
             }
-            .frame(width: 50, height: 50)   // ✅ حجم المربع
-        }
-        
-        // ✅ شكل الزاوية الواحدة
-        var corner: some View {
-            Path { path in
-                path.move(to: CGPoint(x: 20, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: 20))
-            }
-            .stroke(Color.yellow, lineWidth: 4)
+            .allowsHitTesting(false)
         }
     }
 
