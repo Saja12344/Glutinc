@@ -316,3 +316,23 @@ struct OCRQualityEvaluatorTests {
         #expect(result.status == .reviewRecommended)
     }
 }
+
+struct ProductCatalogExploreTests {
+    @Test func glutenProductsAreEligibleForExplore() {
+        #expect(ProductCatalog.isEligibleForExplore(
+            verification: .pending,
+            gluten: .containsGluten
+        ))
+        #expect(ProductCatalog.isEligibleForExplore(
+            verification: .verified,
+            gluten: .noGlutenDetected
+        ))
+    }
+
+    @Test func rejectedProductsAreHiddenFromExplore() {
+        #expect(!ProductCatalog.isEligibleForExplore(
+            verification: .rejected,
+            gluten: .noGlutenDetected
+        ))
+    }
+}

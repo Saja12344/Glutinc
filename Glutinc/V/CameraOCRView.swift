@@ -20,6 +20,13 @@ struct CameraView: View {
                     .ignoresSafeArea()
                     .onAppear { cameraVM.checkCameraPermissionAndStart() }
                     .onDisappear { cameraVM.stopCamera() }
+                    .onChange(of: capturedImage) { _, image in
+                        if image != nil {
+                            cameraVM.stopCamera()
+                        } else if selectedTab == .scan {
+                            cameraVM.startCamera()
+                        }
+                    }
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 0)
@@ -156,7 +163,6 @@ struct CameraView: View {
                             analysis: $cameraVM.analysis,
                             image: image,
                             evidence: cameraVM.productEvidence,
-                            onReanalyze: { cameraVM.reanalyzeEditedText($0) },
                             onScanAgain: {
                                 withAnimation(.easeInOut(duration: 0.25)) {
                                     capturedImage = nil
@@ -212,10 +218,17 @@ struct CameraView: View {
                     )
                 }
             }
-            .onChange(of: cameraVM.capturedImage) { img in
+            .onChange(of: cameraVM.capturedImage) { _, img in
                 // صورة من الكاميرا
                 if let img {
                     capturedImage = img
+                }
+            }
+            .onChange(of: selectedTab) { _, tab in
+                if tab != .scan {
+                    capturedImage = nil
+                    cameraVM.resetScanPresentation()
+                    cameraVM.stopCamera()
                 }
             }
             .navigationBarHidden(true)

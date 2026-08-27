@@ -9,15 +9,12 @@ struct ResultView: View {
 
     let image: UIImage
     let evidence: ProductEvidence
-    var onReanalyze: (String) -> Void
     var onScanAgain: () -> Void
     var onChooseAnotherPhoto: () -> Void
     var onSelectIngredientArea: (() -> Void)? = nil
 
     @State private var goToPost = false
     @State private var showSignIn = false
-    @State private var isEditingText = false
-    @State private var editedText = ""
 
     var body: some View {
         VStack(spacing: 12) {
@@ -34,7 +31,6 @@ struct ResultView: View {
                         unknownSection
                         possibleOCRSection
                         manufacturerSection
-                        editSection
                         scanQualitySection
                     }
                     disclaimer
@@ -51,7 +47,6 @@ struct ResultView: View {
         }
         .background(AppColors.navy2)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .onAppear { editedText = analysis.originalOCRText.isEmpty ? analysis.extractedText : analysis.originalOCRText }
         .sheet(isPresented: $showSignIn) {
             ZStack {
                 AppColors.navy.ignoresSafeArea()
@@ -275,48 +270,6 @@ struct ResultView: View {
                 }
             }
         }
-    }
-
-    @ViewBuilder
-    private var editSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                if !isEditingText {
-                    editedText = analysis.extractedText
-                }
-                isEditingText.toggle()
-            } label: {
-                Text(L10n.t("Edit extracted text", ar: "تعديل النص المستخرج"))
-                    .font(.headline)
-                    .foregroundStyle(AppColors.teal)
-            }
-            if isEditingText {
-                TextEditor(text: $editedText)
-                    .frame(minHeight: 120)
-                    .padding(8)
-                    .scrollContentBackground(.hidden)
-                    .foregroundStyle(AppColors.textPrimary)
-                    .background(AppColors.navy3)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                Button {
-                    onReanalyze(editedText)
-                    isEditingText = false
-                } label: {
-                    Text(L10n.t("Analyze Again", ar: "إعادة التحليل"))
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .foregroundStyle(AppColors.navy)
-                        .background(AppColors.teal)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal)
     }
 
     @ViewBuilder

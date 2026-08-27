@@ -218,80 +218,83 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
     }
 
     func startCamera() {
-        if session.isRunning { return }
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
 
-        session.beginConfiguration()
-        if session.canSetSessionPreset(.photo) {
-            session.sessionPreset = .photo
+            if self.session.isRunning {
+                self.session.stopRunning()
+            }
+
+            self.session.beginConfiguration()
+            if self.session.canSetSessionPreset(.photo) {
+                self.session.sessionPreset = .photo
+            }
+
+            self.session.inputs.forEach { self.session.removeInput($0) }
+            self.session.outputs.forEach { self.session.removeOutput($0) }
+
+            let discovery = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [
+                    .builtInWideAngleCamera,
+                    .builtInUltraWideCamera
+                ],
+                mediaType: .video,
+                position: .back
+            )
+
+            guard let camera = discovery.devices.first(where: {
+                $0.deviceType == .builtInWideAngleCamera
+            }) ?? discovery.devices.first,
+                  let input = try? AVCaptureDeviceInput(device: camera),
+                  self.session.canAddInput(input),
+                  self.session.canAddOutput(self.photoOutput) else {
+                print("❌ فشل إعداد الكاميرا")
+                self.session.commitConfiguration()
+                return
+            }
+
+            self.session.addInput(input)
+            self.session.addOutput(self.photoOutput)
+            if #available(iOS 16.0, *) {
+                self.photoOutput.maxPhotoQualityPrioritization = .quality
+            } else {
+                self.photoOutput.isHighResolutionCaptureEnabled = true
+            }
+
+            self.session.commitConfiguration()
+            self.videoDevice = camera
+            self.session.startRunning()
+
+            Task { @MainActor in
+                self.setAutoFocus()
+                if let observer = self.subjectAreaObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                }
+                self.subjectAreaObserver = NotificationCenter.default.addObserver(
+                    forName: .AVCaptureDeviceSubjectAreaDidChange,
+                    object: self.videoDevice,
+                    queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor in
+                        self?.setAutoFocus()
+                    }
+                }
+            }
         }
-
-        let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [
-                .builtInWideAngleCamera,
-                .builtInUltraWideCamera   // ✅ تدعم الماكرو
-            ],
-            mediaType: .video,
-            position: .back
-        )
-
-        // ✅ نختار العدسة الأفضل (Wide أولاً ثم UltraWide عند القرب)
-        guard let camera = discovery.devices.first(where: {
-            $0.deviceType == .builtInWideAngleCamera
-        }) ?? discovery.devices.first,
-        let input = try? AVCaptureDeviceInput(device: camera),
-        session.canAddInput(input),
-        session.canAddOutput(photoOutput) else {
-
-            print("❌ فشل إعداد الكاميرا")
-            session.commitConfiguration()
-            return
-        }
-
-        // ✅ إزالة أي Inputs قديمة
-        session.inputs.forEach { session.removeInput($0) }
-
-        session.addInput(input)
-        session.addOutput(photoOutput)
-        if #available(iOS 16.0, *) {
-            photoOutput.maxPhotoQualityPrioritization = .quality
-        } else {
-            photoOutput.isHighResolutionCaptureEnabled = true
-        }
-
-        session.commitConfiguration()
-        session.startRunning()
-
-        // ✅ نخزّن الجهاز للفوكس
-        videoDevice = camera
-
-        // ✅ تفعيل سلوك الوردة (ماكرو)
-        setAutoFocus()
-
-        // ✅ إعادة الفوكس تلقائيًا عند تغيّر المشهد
-        // ✅ إزالة أي observer قديم قبل إضافة الجديد
-        if let observer = subjectAreaObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-
-        subjectAreaObserver = NotificationCenter.default.addObserver(
-            forName: .AVCaptureDeviceSubjectAreaDidChange,
-            object: videoDevice,
-            queue: .main
-        ) { [weak self] _ in
-            self?.setAutoFocus()
-        }
-
     }
 
-    // ✅ إيقاف الكاميرا
     func stopCamera() {
-        if session.isRunning {
-            session.stopRunning()
-        }
-
-        if let observer = subjectAreaObserver {
-            NotificationCenter.default.removeObserver(observer)
-            subjectAreaObserver = nil
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            if self.session.isRunning {
+                self.session.stopRunning()
+            }
+            Task { @MainActor in
+                if let observer = self.subjectAreaObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    self.subjectAreaObserver = nil
+                }
+            }
         }
     }
 
@@ -546,7 +549,7 @@ struct CameraPreview: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.previewLayer?.frame = UIScreen.main.bounds
+        context.coordinator.previewLayer?.frame = uiView.bounds
     }
 
     func makeCoordinator() -> Coordinator {

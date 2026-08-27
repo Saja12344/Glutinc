@@ -79,8 +79,8 @@ struct HomeView: View {
                                         .font(.headline)
                                         .foregroundStyle(AppColors.textSecondary)
                                     Text(L10n.t(
-                                        "Only verified products with no gluten ingredients detected appear here.",
-                                        ar: "تظهر هنا فقط المنتجات الموثّقة التي لم يُكتشف فيها مكونات غلوتين."
+                                        "Community posts appear here, including products with gluten and without.",
+                                        ar: "تظهر هنا منشورات المجتمع، بما فيها المنتجات التي تحتوي على غلوتين والتي لا تحتوي."
                                     ))
                                     .font(.footnote)
                                     .foregroundStyle(AppColors.textSecondary)
@@ -148,6 +148,15 @@ private struct PostRow: View {
     var onSave: (String) -> Void
     @EnvironmentObject var cloudVM: UserCloudVM
 
+    private var glutenTint: Color {
+        switch post.glutenAnalysisStatus {
+        case .noGlutenDetected: return AppColors.teal
+        case .containsGluten: return AppColors.danger
+        case .uncertain: return AppColors.warning
+        case .notAnalyzed: return AppColors.textSecondary
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .topTrailing) {
@@ -190,9 +199,10 @@ private struct PostRow: View {
                 }
                 Text(post.glutenCardLabel)
                     .font(.caption2.weight(.semibold))
+                    .foregroundStyle(glutenTint)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AppColors.teal.opacity(0.18))
+                    .background(glutenTint.opacity(0.18))
                     .clipShape(Capsule())
                     .accessibilityLabel(post.glutenAnalysisStatus.fullLabel)
             }

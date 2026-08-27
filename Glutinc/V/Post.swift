@@ -1,6 +1,7 @@
 
 import SwiftUI
 import PhotosUI
+import UIKit
 import MapKit   // لو حابة تطوريه لاحقًا للبحث الحقيقي
 
 struct Post: View {
@@ -44,11 +45,24 @@ struct Post: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showImageOptions = false
     @State private var showCamera = false
+    @State private var rating = 0
     // ✅ كل الحقول المطلوبة
     private var isFormValid: Bool {
         selectedImage != nil &&
         !productName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !selectedCategory.isEmpty
+        !selectedCategory.isEmpty &&
+        rating > 0
+    }
+
+    private var ratingLabel: String {
+        switch rating {
+        case 1: return L10n.t("Poor", ar: "ضعيف")
+        case 2: return L10n.t("Fair", ar: "مقبول")
+        case 3: return L10n.t("Okay", ar: "جيد")
+        case 4: return L10n.t("Good", ar: "جيد جدًا")
+        case 5: return L10n.t("Great", ar: "ممتاز")
+        default: return L10n.t("Tap a star to rate", ar: "اضغط على نجمة للتقييم")
+        }
     }
 
     var body: some View {
@@ -104,39 +118,53 @@ struct Post: View {
                         
                         
                         // MARK: - Rating
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("How was your product?")
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text(L10n.t("How was your product?", ar: "كيف كان المنتج؟"))
                                 .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            HStack(spacing: 10) {
+                                .foregroundStyle(AppColors.textPrimary)
+
+                            HStack(spacing: 6) {
                                 ForEach(1...5, id: \.self) { star in
-                                    Image(systemName: "star.fill")
-                                        .font(.system(size: 30))
-                                        .foregroundColor(
-                                            star <= cloudVM.rating
-                                            ? .yellow
-                                            : .gray.opacity(0.3)
-                                        )
-                                        .onTapGesture {
-                                            cloudVM.updateRating(to: star)
-                                        }
+                                    Button {
+                                        rating = star
+                                        cloudVM.updateRating(to: star)
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    } label: {
+                                        Image(systemName: star <= rating ? "star.fill" : "star")
+                                            .font(.system(size: 28, weight: .semibold))
+                                            .foregroundStyle(star <= rating ? AppColors.teal : AppColors.textSecondary.opacity(0.45))
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 44)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("\(star)")
                                 }
                             }
-                            
-                            if showValidation && cloudVM.rating == 0 {
-                                Text("Please rate the product.")
+
+                            Text(ratingLabel)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(rating == 0 ? AppColors.textSecondary : AppColors.teal)
+
+                            if showValidation && rating == 0 {
+                                Text(L10n.t("Please rate the product.", ar: "فضلاً قيّم المنتج."))
                                     .font(.caption)
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(AppColors.danger)
                             }
                         }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(AppColors.card)
+                        )
                         
                         // MARK: - Product Name
                         glassTextField("Product Name", text: $productName)
                             .foregroundColor(.primary)
                             .formField(
                                 isInvalid: showValidation && productName.trimmingCharacters(in: .whitespaces).isEmpty,
-                                isEditing: !productName.isEmpty
+                                isEditing: false
                             )
                         
                         
@@ -144,8 +172,8 @@ struct Post: View {
                         glassTextField("Enter the price", text: $price, keyboardType: .decimalPad)
                             .foregroundColor(.primary)
                             .formField(
-                                isInvalid: showValidation && price.trimmingCharacters(in: .whitespaces).isEmpty,
-                                isEditing: !price.isEmpty
+                                isInvalid: showValidation && price.trimmingCharacters(in: .whitespaces).isEmpty == false && Double(price) == nil,
+                                isEditing: false
                             )
                         
                         
@@ -163,7 +191,7 @@ struct Post: View {
                         }
                         .formField(
                             isInvalid: false,
-                            isEditing: !location.isEmpty
+                            isEditing: false
                         )
                         
                         
@@ -212,7 +240,7 @@ struct Post: View {
                         .foregroundColor(.primary)
                         .formField(
                             isInvalid: false,
-                            isEditing: !notes.isEmpty
+                            isEditing: false
                         )
                         
                         
@@ -259,8 +287,8 @@ struct Post: View {
                         .padding(.top, 8)
 
                         Text(L10n.t(
-                            "Submissions start as pending. Explore only shows verified products with no gluten ingredients detected.",
-                            ar: "تبدأ الطلبات بحالة انتظار. تظهر في Explore فقط المنتجات الموثّقة التي لم يُكتشف فيها غلوتين."
+                            "Your post appears in Explore after you publish. Products with gluten and without both show up.",
+                            ar: "يظهر منشورك في الاستكشاف بعد النشر. تظهر المنتجات التي تحتوي على غلوتين والتي لا تحتوي."
                         ))
                         .font(.footnote)
                         .foregroundStyle(AppColors.textSecondary)
@@ -325,7 +353,11 @@ struct Post: View {
     
     // MARK: - النشر (أضفت notes + productURL لو حبيتي)
     func uploadProductToCloud(completion: @escaping (Bool) -> Void) {
-        guard let ownerID = cloudVM.userRecordID else {
+        guard let ownerID = cloudVM.userRecordID ?? cloudVM.signedUser?.id else {
+            submitMessage = L10n.t(
+                "Sign in to publish this product.",
+                ar: "سجّل الدخول لنشر هذا المنتج."
+            )
             completion(false)
             return
         }
@@ -377,7 +409,7 @@ struct Post: View {
             id: UUID().uuidString,
             productName: productName,
             username: cloudVM.user.name,
-            rating: Double(cloudVM.rating),
+            rating: Double(rating),
             isGlutenFree: gluten == .noGlutenDetected,
             price: price,
             location: location,
@@ -490,7 +522,7 @@ struct FormFieldStyle: ViewModifier {
             return .red
         }
         if isEditing {
-            return .yellow
+            return AppColors.teal.opacity(0.8)
         }
         return Color.white.opacity(0.2)
     }

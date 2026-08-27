@@ -428,25 +428,8 @@ final class CloudKitService {
     }
 
     func fetchExploreProducts(completion: @escaping ([ProductModel]) -> Void) {
-        let predicate = NSPredicate(
-            format: "verificationStatus == %@ AND glutenAnalysisStatus == %@",
-            VerificationStatus.verified.rawValue,
-            GlutenAnalysisStatus.noGlutenDetected.rawValue
-        )
-        let query = CKQuery(recordType: "Product", predicate: predicate)
-        Task {
-            do {
-                let (matchResults, _) = try await publicDB.records(matching: query)
-                let products = matchResults.compactMap { _, result -> ProductModel? in
-                    guard case let .success(record) = result else { return nil }
-                    return mapProduct(record)
-                }
-                await MainActor.run { completion(products) }
-            } catch {
-                fetchProducts { all in
-                    completion(all.filter(\.isEligibleForExplore))
-                }
-            }
+        fetchProducts { all in
+            completion(all.filter { $0.ownerAppleID != "deleted" && $0.isEligibleForExplore })
         }
     }
 

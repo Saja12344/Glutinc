@@ -1,34 +1,48 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "NSCameraUsageDescription" : {
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glutinc uses the camera to scan product barcodes and ingredient labels."
+            "state" : "new",
+            "value" : "Glutincc"
           }
-        },
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
+      "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "يستخدم Glutinc الكاميرا لمسح باركود المنتجات وقوائم المكونات."
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glutinc uses the camera to scan product barcodes and ingredient labels."
+          }
         }
       }
     },
     "NSPhotoLibraryUsageDescription" : {
+      "comment" : "Privacy - Photo Library Usage Description",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glutinc uses your photo library so you can add images to community posts."
-          }
-        },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "يستخدم Glutinc مكتبة الصور للسماح لك بإضافة صور إلى منشورات المجتمع."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glutinc uses your photo library so you can add images to community posts."
           }
         }
       }

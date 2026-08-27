@@ -131,11 +131,11 @@ final class UserCloudVM: ObservableObject {
     func loadExploreProducts() {
         ck.fetchExploreProducts { fetched in
             let blocked = self.blockedUserIDs
-            let explore = fetched.filter { !blocked.contains($0.ownerAppleID) }
-            let others = self.products.filter { !$0.isEligibleForExplore }
-            var merged = explore
-            for item in others where !merged.contains(where: { $0.id == item.id }) {
-                merged.append(item)
+            var merged = fetched.filter { !blocked.contains($0.ownerAppleID) }
+            for item in self.products where !merged.contains(where: { $0.id == item.id }) {
+                if !blocked.contains(item.ownerAppleID), item.ownerAppleID != "deleted", item.isEligibleForExplore {
+                    merged.insert(item, at: 0)
+                }
             }
             self.products = merged
             self.hasLoadedProducts = true
@@ -208,17 +208,13 @@ final class UserCloudVM: ObservableObject {
 //        return products.filter { $0.ownerAppleID == userID }
 //    }
     var myPosts: [ProductModel] {
-        guard let ownerID = userRecordID else {
-            print("❌ no userRecordID")
-            return []
-        }
-
-        let filtered = products.filter { $0.ownerAppleID == ownerID }
-        print("👤 ownerID:", ownerID)
-        print("📦 myPosts:", filtered.count)
-
-
-        return filtered
+        let ids = Set(
+            [signedUser?.id, userRecordID, user.appleID]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+        )
+        guard !ids.isEmpty else { return [] }
+        return products.filter { ids.contains($0.ownerAppleID) }
     }
 
 
@@ -463,6 +459,21 @@ final class UserCloudVM: ObservableObject {
         guard isSignedIn, !userId.isEmpty, userId != signedUser?.id else { return }
         blockedUserIDs.insert(userId)
         ck.blockUser(blockedUserId: userId) { _ in }
+    }
+
+    func unblockUser(userId: String) {
+        guard isSignedIn, !userId.isEmpty else { return }
+        blockedUserIDs.remove(userId)
+        ck.unblockUser(blockedUserId: userId) { _ in }
+    }
+
+    func displayName(forBlockedUserId userId: String) -> String {
+        if let name = products.first(where: { $0.ownerAppleID == userId })?.username,
+           !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return name
+        }
+        if userId.count <= 10 { return userId }
+        return String(userId.prefix(8)) + "…"
     }
 
     // MARK: - 🗑️ حذف الحساب

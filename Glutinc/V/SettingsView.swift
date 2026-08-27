@@ -340,6 +340,17 @@ struct SettingsView: View {
                     // MARK: - Danger Zone
                     SectioHeader(title: NSLocalizedString("Danger Zone", comment: ""))
                         .tint(.rd)
+
+                    NavigationLink {
+                        BlockedUsersView()
+                    } label: {
+                        SettingRowContent(
+                            icon: "person.slash",
+                            title: L10n.t("Blocked accounts", ar: "الحسابات المحظورة")
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     Button {
                         showSignOutConfirm = true
                     } label: {
@@ -459,5 +470,60 @@ extension View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
+    }
+}
+
+struct BlockedUsersView: View {
+    @EnvironmentObject var vm: UserCloudVM
+
+    private var blockedIDs: [String] {
+        vm.blockedUserIDs.sorted()
+    }
+
+    var body: some View {
+        ZStack {
+            BackgroundView()
+            Group {
+                if blockedIDs.isEmpty {
+                    Text(L10n.t(
+                        "Accounts you block appear here.",
+                        ar: "تظهر هنا الحسابات التي تحظرها."
+                    ))
+                    .font(.subheadline)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                } else {
+                    List {
+                        ForEach(blockedIDs, id: \.self) { userId in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(vm.displayName(forBlockedUserId: userId))
+                                        .foregroundStyle(AppColors.textPrimary)
+                                    Text(L10n.t("Blocked", ar: "محظور"))
+                                        .font(.caption)
+                                        .foregroundStyle(AppColors.textSecondary)
+                                }
+                                Spacer()
+                                Button {
+                                    vm.unblockUser(userId: userId)
+                                } label: {
+                                    Text(L10n.t("Unblock", ar: "إلغاء الحظر"))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppColors.teal)
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                            .listRowBackground(AppColors.card)
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                }
+            }
+        }
+        .navigationTitle(L10n.t("Blocked accounts", ar: "الحسابات المحظورة"))
+        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(.dark)
+        .onAppear { vm.loadModerationState() }
     }
 }

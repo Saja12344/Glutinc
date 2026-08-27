@@ -78,6 +78,7 @@ enum ProductCatalog {
         verification: VerificationStatus,
         gluten: GlutenAnalysisStatus
     ) -> Bool {
-        verification == .verified && gluten == .noGlutenDetected
+        _ = gluten
+        return verification != .rejected
     }
 }

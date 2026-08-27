@@ -27,80 +27,55 @@ struct ProfileContentView: View {
 
             BackgroundView()
 
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
 
-                // الاسم
                 Text(vm.user.name)
                     .foregroundStyle(.primary)
                     .font(.title2).fontWeight(.semibold)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 8)
 
-                // Segmented Control
-                HStack(spacing: 150) {
-
+                HStack {
                     segmentButton(
-                        icon: "text.justify",
+                        icon: "square.grid.2x2",
+                        title: L10n.t("Posts", ar: "المنشورات"),
                         isSelected: selectedSegment == 1
                     ) {
                         withAnimation(.spring()) { selectedSegment = 1 }
                     }
 
+                    Spacer()
+
                     segmentButton(
                         icon: "bookmark.fill",
+                        title: L10n.t("Saved", ar: "المحفوظات"),
                         isSelected: selectedSegment == 2
                     ) {
                         withAnimation(.spring()) { selectedSegment = 2 }
                     }
                 }
+                .padding(.horizontal, 48)
 
-                if selectedSegment == 1 {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible()), GridItem(.flexible())],
-                        spacing: 20
-                    ) {
-                        ForEach(vm.myPosts, id: \.id) { post in
-                            Image(uiImage: post.image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(height: 140)
-                                .clipped()
-                                .cornerRadius(14)
-                        }
-                    }
-                    .padding(.horizontal)
-                } else {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible()), GridItem(.flexible())],
-                        spacing: 20
-                    ) {
-                        ForEach(vm.savedProducts) { post in
-                            NavigationLink {
-                                ProductDetailView(post: post)
-                            } label: {
-                                Image(uiImage: post.image)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(height: 140)
-                                    .clipped()
-                                    .cornerRadius(14)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    if vm.savedProducts.isEmpty {
-                        Text(L10n.t("Saved posts appear here after you sign in and bookmark them.", ar: "تظهر المنشورات المحفوظة هنا بعد تسجيل الدخول وحفظها."))
-                            .font(.footnote)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .padding()
+                ScrollView {
+                    if selectedSegment == 1 {
+                        postsGrid(items: vm.myPosts, emptyText: L10n.t(
+                            "Posts you publish from this account appear here.",
+                            ar: "تظهر هنا المنشورات التي تنشرها من هذا الحساب."
+                        ))
+                    } else {
+                        postsGrid(items: vm.savedProducts, emptyText: L10n.t(
+                            "Saved posts appear here after you bookmark them.",
+                            ar: "تظهر المنشورات المحفوظة هنا بعد حفظها."
+                        ))
                     }
                 }
-
-                Spacer()
             }
           
             .navigationTitle(NSLocalizedString("Profile", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
+        }
+        .onAppear {
+            vm.loadExploreProducts()
+            vm.loadModerationState()
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -115,23 +90,60 @@ struct ProfileContentView: View {
         }
     }
 
+    @ViewBuilder
+    private func postsGrid(items: [ProductModel], emptyText: String) -> some View {
+        if items.isEmpty {
+            Text(emptyText)
+                .font(.footnote)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 48)
+                .padding(.horizontal)
+        } else {
+            LazyVGrid(
+                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                spacing: 16
+            ) {
+                ForEach(items) { post in
+                    NavigationLink {
+                        ProductDetailView(post: post)
+                    } label: {
+                        Image(uiImage: post.image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 140)
+                            .clipped()
+                            .cornerRadius(14)
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
+        }
+    }
+
     // زر السيجمنت
     private func segmentButton(
         icon: String,
+        title: String,
         isSelected: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 20))
                     .foregroundStyle(isSelected ? Color.orng : .gray.opacity(0.6))
-
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(isSelected ? AppColors.textPrimary : AppColors.textSecondary)
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color.orng)
                     .frame(width: isSelected ? 40 : 0, height: 3)
             }
         }
+        .accessibilityLabel(title)
     }
 }
 import AuthenticationServices
