@@ -12,9 +12,11 @@ struct ResultView: View {
     var onScanAgain: () -> Void
     var onChooseAnotherPhoto: () -> Void
     var onSelectIngredientArea: (() -> Void)? = nil
+    var onPublished: () -> Void = {}
 
     @State private var goToPost = false
     @State private var showSignIn = false
+    @State private var showScannedDetails = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -28,10 +30,8 @@ struct ResultView: View {
                     } else {
                         glutenSection
                         reviewIngredientsSection
-                        unknownSection
-                        possibleOCRSection
                         manufacturerSection
-                        scanQualitySection
+                        scannedDetailsSection
                     }
                     disclaimer
                     if analysis.status == .unreadableIngredients {
@@ -78,7 +78,8 @@ struct ResultView: View {
                     initialImage: image,
                     barcode: evidence.barcode,
                     ingredientText: analysis.extractedText,
-                    evidence: evidence
+                    evidence: evidence,
+                    onPublished: onPublished
                 ),
                 isActive: $goToPost
             ) { EmptyView() }
@@ -228,30 +229,60 @@ struct ResultView: View {
     }
 
     @ViewBuilder
-    private var unknownSection: some View {
-        if !analysis.unknownHits.isEmpty {
-            card(title: L10n.t("Text we couldn't identify", ar: "نصوص تعذر التعرّف عليها")) {
-                ForEach(analysis.unknownHits) { hit in
-                    ingredientRow(hit.name, color: AppColors.textSecondary)
+    private var scannedDetailsSection: some View {
+        let raw = analysis.originalOCRText.isEmpty ? analysis.extractedText : analysis.originalOCRText
+        let hasDetails = !raw.isEmpty
+            || !analysis.unknownHits.isEmpty
+            || !analysis.possibleOCRHits.isEmpty
+            || analysis.scanQuality != .good
+        if hasDetails {
+            DisclosureGroup(isExpanded: $showScannedDetails) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if analysis.scanQuality != .good {
+                        Text(analysis.scanQuality == .poor
+                             ? L10n.t("The scan quality is too low to confirm ingredients.", ar: "جودة المسح منخفضة جدًا لتأكيد المكونات.")
+                             : L10n.t("Part of the label may be incomplete or low confidence.", ar: "قد يكون جزء من الملصق غير مكتمل أو منخفض الثقة."))
+                            .font(.footnote)
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
+                    if !analysis.unknownHits.isEmpty {
+                        Text(L10n.t("Text we couldn't identify", ar: "نصوص تعذر التعرّف عليها"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppColors.textPrimary)
+                        ForEach(analysis.unknownHits) { hit in
+                            ingredientRow(hit.name, color: AppColors.textSecondary)
+                        }
+                    }
+                    if !analysis.possibleOCRHits.isEmpty {
+                        Text(L10n.t("Possible OCR issue detected", ar: "تم اكتشاف مشكلة محتملة في قراءة النص"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppColors.textPrimary)
+                        ForEach(analysis.possibleOCRHits) { hit in
+                            ingredientRow(hit.name, color: AppColors.warning)
+                        }
+                    }
+                    if !raw.isEmpty {
+                        Text(L10n.t("Full scanned text", ar: "النص الكامل من المسح"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppColors.textPrimary)
+                        Text(raw)
+                            .font(.footnote)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
+                .padding(.top, 8)
+            } label: {
+                Text(L10n.t("More scan details", ar: "تفاصيل إضافية للمسح"))
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textPrimary)
             }
-        }
-    }
-
-    @ViewBuilder
-    private var possibleOCRSection: some View {
-        if !analysis.possibleOCRHits.isEmpty {
-            card(title: L10n.t("Possible OCR issue detected", ar: "تم اكتشاف مشكلة محتملة في قراءة النص")) {
-                Text(L10n.t(
-                    "These look similar to gluten terms but are not confirmed.",
-                    ar: "هذه النصوص تشبه مصطلحات الغلوتين لكنها غير مؤكدة."
-                ))
-                .font(.footnote)
-                .foregroundStyle(AppColors.textSecondary)
-                ForEach(analysis.possibleOCRHits) { hit in
-                    ingredientRow(hit.name, color: AppColors.warning)
-                }
-            }
+            .tint(AppColors.teal)
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal)
         }
     }
 
@@ -268,19 +299,6 @@ struct ResultView: View {
                 ForEach(analysis.manufacturerWarnings) { warning in
                     ingredientRow(warning.name, color: AppColors.warning)
                 }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var scanQualitySection: some View {
-        if analysis.scanQuality != .good {
-            card(title: L10n.t("Scan quality", ar: "جودة المسح")) {
-                Text(analysis.scanQuality == .poor
-                     ? L10n.t("The scan quality is too low to confirm ingredients.", ar: "جودة المسح منخفضة جدًا لتأكيد المكونات.")
-                     : L10n.t("Part of the label may be incomplete or low confidence.", ar: "قد يكون جزء من الملصق غير مكتمل أو منخفض الثقة."))
-                    .font(.footnote)
-                    .foregroundStyle(AppColors.textSecondary)
             }
         }
     }

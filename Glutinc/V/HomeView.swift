@@ -23,20 +23,16 @@ struct HomeView: View {
         }
     }
 
-    enum ProductCategory: String, CaseIterable, Identifiable {
-        case grains = "Grains & Flours"
-        case dairy = "Dairy"
-        case drinks = "Drinks"
-        case meat = "Meat & Alternatives"
-        case others = "Others"
-        var id: String { rawValue }
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
                 BackgroundView()
                 VStack(spacing: 0) {
+                    glassSearchField
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                        .padding(.bottom, 4)
+
                     Text(L10n.t(
                         "Community content is shared by users and is not medical advice.",
                         ar: "محتوى المجتمع يشاركه المستخدمون ولا يُعد استشارة طبية."
@@ -53,7 +49,7 @@ struct HomeView: View {
                                 selectedCategory = nil
                             }
                             ForEach(ProductCategory.allCases) { category in
-                                categoryChip(category.rawValue, selected: selectedCategory == category) {
+                                categoryChip(category.localizedName, selected: selectedCategory == category) {
                                     selectedCategory = category
                                 }
                             }
@@ -95,7 +91,7 @@ struct HomeView: View {
                 }
             }
             .navigationTitle(L10n.t("Explore", ar: "استكشف"))
-            .searchable(text: $searchText, prompt: L10n.t("Search", ar: "بحث"))
+            .navigationBarTitleDisplayMode(.large)
             .onAppear { cloudVM.loadExploreProducts() }
             .sheet(isPresented: $showSignIn) {
                 ZStack {
@@ -119,6 +115,38 @@ struct HomeView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    private var glassSearchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(AppColors.textSecondary)
+            TextField(
+                L10n.t("Search", ar: "بحث"),
+                text: $searchText
+            )
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .foregroundStyle(AppColors.textPrimary)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L10n.t("Clear search", ar: "مسح البحث"))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
+        .accessibilityLabel(L10n.t("Search", ar: "بحث"))
     }
 
     private func handleSave(productID: String) {

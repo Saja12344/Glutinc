@@ -157,8 +157,8 @@ final class CloudKitService {
         if let barcode = product.barcode {
             record["barcode"] = barcode as CKRecordValue
         }
-        if let ingredientText = product.ingredientText {
-            record["ingredientText"] = ingredientText as CKRecordValue
+        if let ingredientText = product.ingredientText, !ingredientText.isEmpty {
+            record["ingredientText"] = String(ingredientText.prefix(500)) as CKRecordValue
         }
         if let verifiedBy = product.verifiedBy {
             record["verifiedBy"] = verifiedBy as CKRecordValue
@@ -213,6 +213,7 @@ final class CloudKitService {
             recordType: "Product",
             predicate: NSPredicate(value: true)
         )
+        query.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
         Task {
             do {

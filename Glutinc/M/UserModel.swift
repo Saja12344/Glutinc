@@ -10,7 +10,6 @@ import SwiftUI
 import Combine
 import UIKit
 import PhotosUI
-import CloudKit
 import AuthenticationServices
 
 // ✅ نفس موديلك تمامًا
@@ -77,21 +76,12 @@ final class UserCloudVM: ObservableObject {
 
 
     private let userDefaultsKey = "loggedInUserId"
-    private let ck = CloudKitService()
+    private let ck = FirebaseCommunityService.shared
 
     // ✅ عند تشغيل التطبيق
     init() {
         loadUserSession()
-        CKContainer(identifier: "iCloud.com.sga.Glutinc").accountStatus { status, error in
-               DispatchQueue.main.async {
-                   print("☁️ iCloud status:", status.rawValue)
-
-                   if let error = error {
-                       print("☁️ iCloud error:", error.localizedDescription)
-                   }
-               }
-           }
-       }
+    }
 //    var myPosts: [ProductModel] {
 //        guard let userID = signedUser?.id else {
 //            print("❌ signedUser nil – no posts")
@@ -157,8 +147,13 @@ final class UserCloudVM: ObservableObject {
         ck.saveProduct(product) { success in
             if success {
                 self.products.insert(product, at: 0)
+                completion(true, nil)
+            } else {
+                completion(false, L10n.t(
+                    "Couldn't publish. Try again.",
+                    ar: "تعذر النشر. حاول مرة أخرى."
+                ))
             }
-            completion(success, nil)
         }
     }
 
@@ -257,7 +252,7 @@ final class UserCloudVM: ObservableObject {
                         // ✅ مستخدم قديم → نستخدم الاسم المخزن
                         await MainActor.run {
                             self.user.name = existingProfile.displayName
-                            self.userRecordID = existingProfile.recordID?.recordName
+                            self.userRecordID = existingProfile.appleID
                         }
 
                     } else {
@@ -305,11 +300,6 @@ final class UserCloudVM: ObservableObject {
 
         if let profile = try? await ck.fetchUserProfile(by: id) {
             user.name = profile.displayName
-
-            if let url = profile.photoAsset?.fileURL,
-               let img = UIImage(contentsOfFile: url.path) {
-                user.photo = img
-            }
         } else {
             // أول مرة: إنشاء بروفايل
             _ = try? await ck.upsertUserProfile(
@@ -373,7 +363,7 @@ final class UserCloudVM: ObservableObject {
                 if let profile = try? await ck.fetchUserProfile(by: id) {
                     self.user.appleID = id
                     self.user.name = profile.displayName
-                    self.userRecordID = profile.recordID?.recordName   // ⭐ هنا كمان
+                    self.userRecordID = profile.appleID
                     print("♻️ session userRecordID:", self.userRecordID ?? "nil")
                 }
             }

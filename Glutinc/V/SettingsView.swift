@@ -208,6 +208,7 @@ import UIKit
 struct SettingsView: View {
 
     @EnvironmentObject var vm: UserCloudVM
+    @ObservedObject private var languageStore = LanguageStore.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var showNamePopup = false
@@ -215,9 +216,7 @@ struct SettingsView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var showSignOutConfirm = false
 
-    private var isAR: Bool {
-        Locale.preferredLanguages.first?.hasPrefix("ar") == true
-    }
+    private var isAR: Bool { L10n.isArabic }
 
     var body: some View {
         ZStack {
@@ -227,9 +226,20 @@ struct SettingsView: View {
                 VStack(spacing: 12) {
 
                     // MARK: - General
-                    SectioHeader(title: NSLocalizedString("General", comment: ""))
+                    SectioHeader(title: L10n.t("General", ar: "عام"))
 
-                    // Notifications
+                    Menu {
+                        Button("العربية") { languageStore.code = "ar" }
+                        Button("English") { languageStore.code = "en" }
+                    } label: {
+                        SettingRowContent(
+                            icon: "globe",
+                            title: L10n.t("Language", ar: "اللغة")
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // Edit Name
 //                    HStack {
 //                        Label(NSLocalizedString("Notifications", comment: ""),
 //                              systemImage: "bell")
@@ -249,7 +259,7 @@ struct SettingsView: View {
                     } label: {
                         SettingRowContent(
                             icon: "pencil",
-                            title: NSLocalizedString("Edit Name", comment: "")
+                            title: L10n.t("Edit Name", ar: "تعديل الاسم")
                         )
                     }
                     .buttonStyle(.plain)
@@ -338,7 +348,7 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
 
                     // MARK: - Danger Zone
-                    SectioHeader(title: NSLocalizedString("Danger Zone", comment: ""))
+                    SectioHeader(title: L10n.t("Danger Zone", ar: "منطقة خطر"))
                         .tint(.rd)
 
                     NavigationLink {
@@ -356,7 +366,7 @@ struct SettingsView: View {
                     } label: {
                         SettingRowContent(
                             icon: "arrowshape.turn.up.left",
-                            title: NSLocalizedString("Sign Out", comment: ""),
+                            title: L10n.t("Sign Out", ar: "تسجيل الخروج"),
                             tint: .red
                         )
                     }
@@ -367,7 +377,7 @@ struct SettingsView: View {
                     } label: {
                         SettingRowContent(
                             icon: "trash.fill",
-                            title: NSLocalizedString("Delete Account", comment: ""),
+                            title: L10n.t("Delete Account", ar: "حذف الحساب"),
                             tint: .red
                         )
                     }
@@ -378,16 +388,16 @@ struct SettingsView: View {
                 .padding(.bottom, 40)
             }
         }
-        .navigationTitle(NSLocalizedString("Settings", comment: ""))
+        .navigationTitle(L10n.t("Settings", ar: "الإعدادات"))
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(.dark)
         .environment(\.layoutDirection, isAR ? .rightToLeft : .leftToRight)
 
         // Sign out alert
-        .alert(NSLocalizedString("Sign out?", comment: ""),
+        .alert(L10n.t("Sign out?", ar: "تسجيل الخروج؟"),
                isPresented: $showSignOutConfirm) {
-            Button(NSLocalizedString("Cancel", comment: ""), role: .cancel) {}
-            Button(NSLocalizedString("Sign Out", comment: ""), role: .destructive) {
+            Button(L10n.t("Cancel", ar: "إلغاء"), role: .cancel) {}
+            Button(L10n.t("Sign Out", ar: "تسجيل الخروج"), role: .destructive) {
                 vm.logout()
                 dismiss()
                 
@@ -396,18 +406,18 @@ struct SettingsView: View {
         }
         // Edit Name alert
 
-       .alert("Edit Name", isPresented: $showNamePopup) {
+       .alert(L10n.t("Edit Name", ar: "تعديل الاسم"), isPresented: $showNamePopup) {
 
-            TextField("Your name", text: $nameDraft)
+            TextField(L10n.t("Your name", ar: "اسمك"), text: $nameDraft)
 
-                   Button("Save") {
+                   Button(L10n.t("Save", ar: "حفظ")) {
                        let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                        if !trimmed.isEmpty {
                            vm.updateName(trimmed)
                        }
                    }
 
-                   Button("Cancel", role: .cancel) {}
+                   Button(L10n.t("Cancel", ar: "إلغاء"), role: .cancel) {}
 
                }
     }

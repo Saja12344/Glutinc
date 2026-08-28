@@ -73,6 +73,26 @@ extension ScanAnalysisStatus {
     }
 }
 
+enum ProductCategory: String, CaseIterable, Identifiable {
+    case grains = "Grains & Flours"
+    case dairy = "Dairy"
+    case drinks = "Drinks"
+    case meat = "Meat & Alternatives"
+    case others = "Others"
+
+    var id: String { rawValue }
+
+    var localizedName: String {
+        switch self {
+        case .grains: return L10n.t("Grains & Flours", ar: "حبوب ودقيق")
+        case .dairy: return L10n.t("Dairy", ar: "ألبان")
+        case .drinks: return L10n.t("Drinks", ar: "مشروبات")
+        case .meat: return L10n.t("Meat & Alternatives", ar: "لحوم وبدائل")
+        case .others: return L10n.t("Others", ar: "أخرى")
+        }
+    }
+}
+
 enum ProductCatalog {
     static func isEligibleForExplore(
         verification: VerificationStatus,

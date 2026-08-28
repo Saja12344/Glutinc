@@ -19,6 +19,7 @@ struct Post: View {
     var barcode: String? = nil
     var ingredientText: String = ""
     var evidence: ProductEvidence? = nil
+    var onPublished: () -> Void = {}
     
     // ✅ مدخلات الصفحة (required)
     @State private var productName = ""
@@ -98,7 +99,7 @@ struct Post: View {
                                     VStack(spacing: 10) {
                                         Image(systemName: "photo.on.rectangle")
                                             .font(.system(size: 30, weight: .medium))
-                                        Text("Add product photo")
+                                        Text(L10n.t("Add product photo", ar: "أضيفي صورة المنتج"))
                                             .font(.subheadline)
                                     }
                                     .foregroundColor(.secondary)
@@ -160,7 +161,7 @@ struct Post: View {
                         )
                         
                         // MARK: - Product Name
-                        glassTextField("Product Name", text: $productName)
+                        glassTextField(L10n.t("Product Name", ar: "اسم المنتج"), text: $productName)
                             .foregroundColor(.primary)
                             .formField(
                                 isInvalid: showValidation && productName.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -169,7 +170,7 @@ struct Post: View {
                         
                         
                         // MARK: - Price
-                        glassTextField("Enter the price", text: $price, keyboardType: .decimalPad)
+                        glassTextField(L10n.t("Enter the price", ar: "أدخلي السعر"), text: $price, keyboardType: .decimalPad)
                             .foregroundColor(.primary)
                             .formField(
                                 isInvalid: showValidation && price.trimmingCharacters(in: .whitespaces).isEmpty == false && Double(price) == nil,
@@ -201,17 +202,19 @@ struct Post: View {
                             
                             
                             Menu {
-                                ForEach(cloudVM.categories, id: \.self) { category in
+                                ForEach(ProductCategory.allCases) { category in
                                     Button {
-                                        selectedCategory = category
-                                        cloudVM.selectedCategory = category
+                                        selectedCategory = category.rawValue
+                                        cloudVM.selectedCategory = category.rawValue
                                     } label: {
-                                        Text(category)
+                                        Text(category.localizedName)
                                     }
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory.isEmpty ? "Select Category" : selectedCategory)
+                                    Text(selectedCategory.isEmpty
+                                         ? L10n.t("Select Category", ar: "اختاري التصنيف")
+                                         : (ProductCategory(rawValue: selectedCategory)?.localizedName ?? selectedCategory))
                                         .foregroundColor(selectedCategory.isEmpty ? .secondary : .primary)
                                     Spacer()
                                     Image(systemName: "chevron.down")
@@ -225,13 +228,13 @@ struct Post: View {
                             }
                             
                             if showValidation && selectedCategory.isEmpty {
-                                validationText("Category is required.")
+                                validationText(L10n.t("Category is required.", ar: "التصنيف مطلوب."))
                             }
                         }
                         
                         // MARK: - Optional: Notes
                         TextField(
-                            "Add any extra notes here…",
+                            L10n.t("Add any extra notes here…", ar: "أضيفي أي ملاحظات إضافية…"),
                             text: $notes,
                             axis: .vertical
                         )
@@ -248,7 +251,7 @@ struct Post: View {
                         
                         // MARK: - Optional: Product URL
                         VStack(alignment: .leading, spacing: 4) {
-                            glassTextField("Product link (optional)", text: $productURL, keyboardType: .URL)
+                            glassTextField(L10n.t("Product link (optional)", ar: "رابط المنتج (اختياري)"), text: $productURL, keyboardType: .URL)
                         }
                         
                         Text(L10n.t(
@@ -268,12 +271,18 @@ struct Post: View {
                             uploadProductToCloud { success in
                                 isSubmitting = false
                                 if success {
-                                    selectedTab = .wheat
+                                    onPublished()
+                                    dismiss()
+                                } else if submitMessage == nil {
+                                    submitMessage = L10n.t(
+                                        "Couldn't publish. Try again.",
+                                        ar: "تعذر النشر. حاول مرة أخرى."
+                                    )
                                 }
                             }
                             
                         } label: {
-                            Text(isSubmitting ? "Publishing..." : "Publish")
+                            Text(isSubmitting ? L10n.t("Publishing...", ar: "جاري النشر...") : L10n.t("Publish", ar: "نشر"))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 48)
                                 .font(.headline)

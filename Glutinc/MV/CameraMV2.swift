@@ -155,6 +155,7 @@
 import SwiftUI
 import AVFoundation
 import Combine
+import UIKit
 
 @MainActor
 class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
@@ -221,49 +222,50 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
         sessionQueue.async { [weak self] in
             guard let self else { return }
 
-            if self.session.isRunning {
-                self.session.stopRunning()
-            }
+            if self.session.inputs.isEmpty {
+                self.session.beginConfiguration()
+                if self.session.canSetSessionPreset(.photo) {
+                    self.session.sessionPreset = .photo
+                }
 
-            self.session.beginConfiguration()
-            if self.session.canSetSessionPreset(.photo) {
-                self.session.sessionPreset = .photo
-            }
+                self.session.inputs.forEach { self.session.removeInput($0) }
+                self.session.outputs.forEach { self.session.removeOutput($0) }
 
-            self.session.inputs.forEach { self.session.removeInput($0) }
-            self.session.outputs.forEach { self.session.removeOutput($0) }
+                let discovery = AVCaptureDevice.DiscoverySession(
+                    deviceTypes: [
+                        .builtInWideAngleCamera,
+                        .builtInUltraWideCamera
+                    ],
+                    mediaType: .video,
+                    position: .back
+                )
 
-            let discovery = AVCaptureDevice.DiscoverySession(
-                deviceTypes: [
-                    .builtInWideAngleCamera,
-                    .builtInUltraWideCamera
-                ],
-                mediaType: .video,
-                position: .back
-            )
+                guard let camera = discovery.devices.first(where: {
+                    $0.deviceType == .builtInWideAngleCamera
+                }) ?? discovery.devices.first,
+                      let input = try? AVCaptureDeviceInput(device: camera),
+                      self.session.canAddInput(input),
+                      self.session.canAddOutput(self.photoOutput) else {
+                    print("❌ فشل إعداد الكاميرا")
+                    self.session.commitConfiguration()
+                    return
+                }
 
-            guard let camera = discovery.devices.first(where: {
-                $0.deviceType == .builtInWideAngleCamera
-            }) ?? discovery.devices.first,
-                  let input = try? AVCaptureDeviceInput(device: camera),
-                  self.session.canAddInput(input),
-                  self.session.canAddOutput(self.photoOutput) else {
-                print("❌ فشل إعداد الكاميرا")
+                self.session.addInput(input)
+                self.session.addOutput(self.photoOutput)
+                if #available(iOS 16.0, *) {
+                    self.photoOutput.maxPhotoQualityPrioritization = .quality
+                } else {
+                    self.photoOutput.isHighResolutionCaptureEnabled = true
+                }
+
                 self.session.commitConfiguration()
-                return
+                self.videoDevice = camera
             }
 
-            self.session.addInput(input)
-            self.session.addOutput(self.photoOutput)
-            if #available(iOS 16.0, *) {
-                self.photoOutput.maxPhotoQualityPrioritization = .quality
-            } else {
-                self.photoOutput.isHighResolutionCaptureEnabled = true
+            if !self.session.isRunning {
+                self.session.startRunning()
             }
-
-            self.session.commitConfiguration()
-            self.videoDevice = camera
-            self.session.startRunning()
 
             Task { @MainActor in
                 self.setAutoFocus()
@@ -320,9 +322,6 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
 
             device.isSubjectAreaChangeMonitoringEnabled = true
             device.unlockForConfiguration()
-
-            // ✅ بعد أي ضبط فوكس نتحقق من العدسة المناسبة
-            switchToBestCameraForDistance()
 
         } catch {
             print("❌ Focus error:", error)
@@ -533,30 +532,50 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
 
 
 struct CameraPreview: UIViewRepresentable {
-
     let session: AVCaptureSession
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-
-        previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = UIScreen.main.bounds
-
-        view.layer.addSublayer(previewLayer)
-        context.coordinator.previewLayer = previewLayer
+    func makeUIView(context: Context) -> CameraPreviewView {
+        let view = CameraPreviewView()
+        view.previewLayer.session = session
+        view.previewLayer.videoGravity = .resizeAspectFill
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.previewLayer?.frame = uiView.bounds
+    func updateUIView(_ uiView: CameraPreviewView, context: Context) {
+        if uiView.previewLayer.session !== session {
+            uiView.previewLayer.session = session
+        }
+        uiView.previewLayer.videoGravity = .resizeAspectFill
+        uiView.updateVideoOrientation()
+    }
+}
+
+final class CameraPreviewView: UIView {
+    override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+
+    var previewLayer: AVCaptureVideoPreviewLayer {
+        layer as! AVCaptureVideoPreviewLayer
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .black
+        previewLayer.videoGravity = .resizeAspectFill
     }
 
-    class Coordinator {
-        var previewLayer: AVCaptureVideoPreviewLayer?
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        previewLayer.frame = bounds
+        updateVideoOrientation()
+    }
+
+    func updateVideoOrientation() {
+        if let connection = previewLayer.connection, connection.isVideoOrientationSupported {
+            connection.videoOrientation = .portrait
+        }
     }
 }

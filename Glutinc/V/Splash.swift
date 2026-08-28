@@ -1,102 +1,19 @@
-////
-////  Splash.swift
-////  Glutinc22
-////
-////  Created by dana on 17/06/1447 AH.
-////
-//import SwiftUI
-//
-//struct Splash: View {
-//    @Environment(\.colorScheme) private var colorScheme
-//    @State private var isActive: Bool = false
-//    @EnvironmentObject var cloudVM: UserCloudVM
-//
-//    // اللوقو حسب المود
-//    private var logoName: String {
-//        colorScheme == .dark ? "glutinc2" : "glutinc"
-//    }
-//
-//    var body: some View {
-//        Group {
-//            if isActive {
-//                // بعد السبلـاش يفتح الهوم بيج
-//                MainTabContainer()
-//                    .environmentObject(cloudVM)
-//            } else {
-//                ZStack {
-//            // الخلفية نفس HomeView تماماً
-//
-//                    if colorScheme == .dark {
-//                        // دارك مود
-//                        Color("BackgroundMain")
-//                            .ignoresSafeArea()
-//
-//                        RadialGradient(
-//                            gradient: Gradient(colors: [
-//                                Color("GradientEnd"),                       // الأزرق
-//                                Color("GradientStart").opacity(0.10),      // أبيض خفيييف
-//                                .clear
-//                            ]),
-//                            center: .topTrailing,
-//                            startRadius: 40,
-//                            endRadius: 600
-//                        )
-//                        .opacity(0.9)
-//                        .ignoresSafeArea()
-//
-//                    } else {
-//                        // لايت مود
-//                        RadialGradient(
-//                            gradient: Gradient(colors: [
-//                                Color("GradientEnd"),    // الأزرق من الزاوية
-//                                Color("GradientMiddle")  // الأخضر يغطي الباقي
-//                            ]),
-//                            center: .topTrailing,
-//                            startRadius: 40,
-//                            endRadius: 600
-//                        )
-//                        .ignoresSafeArea()
-//                    }
-//
-//                    // اللوقو في النص
-//                    Image(logoName)
-//                        .resizable()
-//                        .scaledToFit()
-//                        .frame(width: 180, height: 180)
-//                        .shadow(color: .black.opacity(0.18),
-//                                radius: 24, x: 0, y: 12)
-//                }
-//                .onAppear {
-//                    // بعد 2 ثانية يروح للهوم
-//                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-//                        withAnimation(.easeOut) {
-//                            isActive = true
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//// اختياري بس عشان اشوفه في الـ Preview
-//#Preview {
-//    Splash()
-//        .preferredColorScheme(.light)
-//}
 import SwiftUI
 
 struct Splash: View {
-    
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var cloudVM: UserCloudVM
-    
-    @State private var showLogo = false
-    @State private var typedText = ""
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @State private var isActive = false
-    @State private var revealWidth: CGFloat = 0
-    
-    
+    @State private var logoProgress: CGFloat = 0
+    @State private var wordReveal: CGFloat = 0
+
+    private let logoFinal: CGFloat = 78
+    private let logoStart: CGFloat = 168
+    private let wordHeight: CGFloat = 36
+    private let wordAspect: CGFloat = 738 / 224
+    private let lockupSpacing: CGFloat = 4
+
     var body: some View {
         Group {
             if isActive {
@@ -105,65 +22,94 @@ struct Splash: View {
             } else {
                 ZStack {
                     BackgroundView()
-                    
-                    // ✅ المحتوى
-                    HStack(spacing: 12) {
-                        
-                        // 🔹 Logo Mark
-                        HStack(spacing: 12) {
-                            
-                            // 🔹 Logo Mark
-                            Image("logo-mark")
-                                .resizable()
-                                   .scaledToFit()
-                                   .frame(width: 110, height: 110)
-                            
-                            // 🔹 Logo Wordmark (ينكشف كأنه كتابة)
-                            Image("logo-wordmark")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 42)
-                                .mask(
-                                    Rectangle()
-                                        .frame(width: revealWidth,
-                                               alignment: .leading )
-                                        .alignmentGuide(.leading) { _ in 0 }
-                                )
-                                .onAppear {
-                                    // العرض الحقيقي للكلمة تقريبًا
-                                    withAnimation(.linear(duration: 1.2)) {
-                                        revealWidth = 260
-                                    }
-                                }
-                        }
-                        
-                    }
+                    lockup
                 }
-                .onAppear {
-                    startAnimation()
-                }
+                .task { await playSplash() }
             }
         }
     }
-    
-    // MARK: - Animation flow
-    private func startAnimation() {
-        
-        // 1️⃣ خلي اللوقو ثابت – ما نسوي له شي
-        revealWidth = 0
-        
-        // 2️⃣ نبدأ "الكتابة" بعد توقف بسيط
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.linear(duration: 1.8)) {
-                revealWidth = 260   // عدليها حسب عرض الاسم
+
+    private var wordWidth: CGFloat { wordHeight * wordAspect }
+
+    private var lockup: some View {
+        GeometryReader { geo in
+            let logoSize = logoStart + (logoFinal - logoStart) * logoProgress
+            let lockupWidth = logoFinal + lockupSpacing + wordWidth
+            let centerX = geo.size.width / 2
+            let centerY = geo.size.height / 2
+            let lockupLogoX = centerX - lockupWidth / 2 + logoFinal / 2
+            let logoX = centerX + (lockupLogoX - centerX) * logoProgress
+            let wordX = lockupLogoX + logoFinal / 2 + lockupSpacing + wordWidth / 2
+
+            ZStack {
+                Image("logo-mark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: logoSize, height: logoSize)
+                    .position(x: logoX, y: centerY)
+                    .flipsForRightToLeftLayoutDirection(false)
+
+                Image("GlutincWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: wordWidth, height: wordHeight)
+                    .mask { SoftRevealMask(progress: wordReveal) }
+                    .opacity(wordReveal > 0.001 ? 1 : 0)
+                    .position(x: wordX, y: centerY)
+                    .flipsForRightToLeftLayoutDirection(false)
             }
+            .environment(\.layoutDirection, .leftToRight)
+            .frame(width: geo.size.width, height: geo.size.height)
         }
-        
-        // 3️⃣ ننتظر شوي بعد ما يخلص → نروح للهوم
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
-            withAnimation(.easeOut(duration: 0.4)) {
+    }
+
+    @MainActor
+    private func playSplash() async {
+        if reduceMotion {
+            logoProgress = 1
+            wordReveal = 1
+            try? await Task.sleep(for: .milliseconds(800))
+            withAnimation(.easeInOut(duration: 0.4)) {
                 isActive = true
             }
+            return
         }
-    }}
 
+        try? await Task.sleep(for: .milliseconds(550))
+        withAnimation(.easeInOut(duration: 0.7)) {
+            logoProgress = 1
+        }
+        try? await Task.sleep(for: .milliseconds(700))
+        withAnimation(.easeInOut(duration: 1.3)) {
+            wordReveal = 1
+        }
+        try? await Task.sleep(for: .milliseconds(1300))
+        try? await Task.sleep(for: .milliseconds(400))
+        withAnimation(.easeInOut(duration: 0.45)) {
+            isActive = true
+        }
+    }
+}
+
+private struct SoftRevealMask: View {
+    var progress: CGFloat
+
+    var body: some View {
+        GeometryReader { geo in
+            let feather = min(28, geo.size.width * 0.12)
+            let lead = max(progress * (geo.size.width + feather), 0.001)
+
+            LinearGradient(
+                stops: [
+                    .init(color: .white, location: 0),
+                    .init(color: .white, location: max(0, (lead - feather) / lead)),
+                    .init(color: .clear, location: 1)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: lead, height: geo.size.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+}

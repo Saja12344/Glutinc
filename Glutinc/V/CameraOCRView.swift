@@ -9,6 +9,7 @@ struct CameraView: View {
     @State private var capturedImage: UIImage?
     @Environment(\.layoutDirection) var layoutDirection
     @State private var isFlashOn = false
+    @State private var showScanTips = false
     @ObservedObject var cloudVM: UserCloudVM
     @Binding var selectedTab: HomeTab
 
@@ -20,13 +21,6 @@ struct CameraView: View {
                     .ignoresSafeArea()
                     .onAppear { cameraVM.checkCameraPermissionAndStart() }
                     .onDisappear { cameraVM.stopCamera() }
-                    .onChange(of: capturedImage) { _, image in
-                        if image != nil {
-                            cameraVM.stopCamera()
-                        } else if selectedTab == .scan {
-                            cameraVM.startCamera()
-                        }
-                    }
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 0)
@@ -79,15 +73,24 @@ struct CameraView: View {
                     }
                     .padding(.horizontal, 16)
 
-                    if cameraVM.needsCaptureTips && capturedImage == nil {
-                        Text(L10n.t(
-                            "Avoid glare · Keep the text sharp · Hold the phone steady",
-                            ar: "تجنب انعكاس الإضاءة · تأكد من وضوح النص · ثبت الهاتف"
-                        ))
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.85))
+                    DisclosureGroup(isExpanded: $showScanTips) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            tipRow(L10n.t("Avoid glare", ar: "تجنّب انعكاس الإضاءة"))
+                            tipRow(L10n.t("Keep the text sharp", ar: "اجعل النص واضحًا"))
+                            tipRow(L10n.t("Hold the phone steady", ar: "ثبّت الهاتف"))
+                        }
                         .padding(.top, 8)
+                    } label: {
+                        Text(L10n.t("Scanning tips", ar: "نصائح المسح"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.9))
                     }
+                    .tint(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
 
                     Spacer()
                         
@@ -176,6 +179,11 @@ struct CameraView: View {
                             },
                             onSelectIngredientArea: cameraVM.libraryOriginalImage == nil ? nil : {
                                 showIngredientCrop = true
+                            },
+                            onPublished: {
+                                capturedImage = nil
+                                cameraVM.resetScanPresentation()
+                                selectedTab = .wheat
                             }
                         )
                         .environmentObject(cloudVM)
@@ -194,11 +202,7 @@ struct CameraView: View {
                     .transition(.move(edge: .bottom))
                     .animation(.easeInOut, value: capturedImage)
                 }
-                    }
-                    
-                    
-                }
-            
+            }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker { image in
                     cameraVM.libraryOriginalImage = image
@@ -229,35 +233,47 @@ struct CameraView: View {
                     capturedImage = nil
                     cameraVM.resetScanPresentation()
                     cameraVM.stopCamera()
+                } else {
+                    cameraVM.startCamera()
                 }
             }
             .navigationBarHidden(true)
             .environmentObject(cloudVM)
         }
-        
     }
-    struct IngredientFocusGuideOverlay: View {
-        var body: some View {
-            GeometryReader { geo in
-                let rect = CameraFocusGuide.previewNormalizedRect
-                let frame = CGRect(
-                    x: rect.origin.x * geo.size.width,
-                    y: rect.origin.y * geo.size.height,
-                    width: rect.size.width * geo.size.width,
-                    height: rect.size.height * geo.size.height
-                )
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.yellow, lineWidth: 3)
-                        .frame(width: frame.width, height: frame.height)
-                        .position(x: frame.midX, y: frame.midY)
-                }
-            }
-            .allowsHitTesting(false)
+
+    private func tipRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("•")
+                .foregroundStyle(.white.opacity(0.85))
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.85))
+            Spacer(minLength: 0)
         }
     }
+}
 
-
+struct IngredientFocusGuideOverlay: View {
+    var body: some View {
+        GeometryReader { geo in
+            let rect = CameraFocusGuide.previewNormalizedRect
+            let frame = CGRect(
+                x: rect.origin.x * geo.size.width,
+                y: rect.origin.y * geo.size.height,
+                width: rect.size.width * geo.size.width,
+                height: rect.size.height * geo.size.height
+            )
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.yellow, lineWidth: 3)
+                    .frame(width: frame.width, height: frame.height)
+                    .position(x: frame.midX, y: frame.midY)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
 
 //// 👇 لازم يكون الـ Preview خارج struct CameraView
 //struct CameraView_Previews: PreviewProvider {

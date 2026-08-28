@@ -18,9 +18,7 @@ struct ProfileContentView: View {
     @EnvironmentObject var vm: UserCloudVM
     @State private var selectedSegment: Int = 1
 
-    private var isAR: Bool {
-        Locale.preferredLanguages.first?.hasPrefix("ar") == true
-    }
+    private var isAR: Bool { L10n.isArabic }
 
     var body: some View {
         ZStack {
@@ -34,7 +32,7 @@ struct ProfileContentView: View {
                     .font(.title2).fontWeight(.semibold)
                     .padding(.bottom, 8)
 
-                HStack {
+                HStack(spacing: 40) {
                     segmentButton(
                         icon: "square.grid.2x2",
                         title: L10n.t("Posts", ar: "المنشورات"),
@@ -42,8 +40,6 @@ struct ProfileContentView: View {
                     ) {
                         withAnimation(.spring()) { selectedSegment = 1 }
                     }
-
-                    Spacer()
 
                     segmentButton(
                         icon: "bookmark.fill",
@@ -53,7 +49,7 @@ struct ProfileContentView: View {
                         withAnimation(.spring()) { selectedSegment = 2 }
                     }
                 }
-                .padding(.horizontal, 48)
+                .frame(maxWidth: .infinity)
 
                 ScrollView {
                     if selectedSegment == 1 {
@@ -70,7 +66,7 @@ struct ProfileContentView: View {
                 }
             }
           
-            .navigationTitle(NSLocalizedString("Profile", comment: ""))
+            .navigationTitle(L10n.t("Profile", ar: "الملف الشخصي"))
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
