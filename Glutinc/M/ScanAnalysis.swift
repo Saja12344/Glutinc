@@ -192,18 +192,46 @@ enum ScanAnalyzer {
 
 enum IngredientLanguage {
     static func matches(_ text: String, arabic wantArabic: Bool) -> Bool {
-        let hasArabic = text.unicodeScalars.contains { scalar in
-            (0x0600...0x06FF).contains(scalar.value)
-                || (0x0750...0x077F).contains(scalar.value)
-                || (0x08A0...0x08FF).contains(scalar.value)
-                || (0xFB50...0xFDFF).contains(scalar.value)
-                || (0xFE70...0xFEFF).contains(scalar.value)
+        display(text, arabic: wantArabic) != nil
+    }
+
+    static func display(_ text: String, arabic wantArabic: Bool) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let stripped: String
+        if wantArabic {
+            stripped = String(trimmed.unicodeScalars.filter { !isLatinLetter($0) })
+            guard containsArabic(stripped) else { return nil }
+        } else {
+            stripped = String(trimmed.unicodeScalars.filter { !isArabicScript($0) })
+            guard !containsArabic(stripped) else { return nil }
+            let hasReadable = stripped.unicodeScalars.contains {
+                CharacterSet.letters.contains($0) || CharacterSet.decimalDigits.contains($0)
+            }
+            guard hasReadable else { return nil }
         }
-        let hasLatin = text.unicodeScalars.contains { scalar in
-            CharacterSet.letters.contains(scalar) && scalar.value <= 0x024F
-        }
-        if hasArabic && !hasLatin { return wantArabic }
-        if hasLatin && !hasArabic { return !wantArabic }
-        return true
+
+        let cleaned = stripped
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleaned.count >= 2 else { return nil }
+        return cleaned
+    }
+
+    private static func isArabicScript(_ scalar: Unicode.Scalar) -> Bool {
+        (0x0600...0x06FF).contains(scalar.value)
+            || (0x0750...0x077F).contains(scalar.value)
+            || (0x08A0...0x08FF).contains(scalar.value)
+            || (0xFB50...0xFDFF).contains(scalar.value)
+            || (0xFE70...0xFEFF).contains(scalar.value)
+    }
+
+    private static func isLatinLetter(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet.letters.contains(scalar) && scalar.value <= 0x024F
+    }
+
+    private static func containsArabic(_ text: String) -> Bool {
+        text.unicodeScalars.contains(where: isArabicScript)
     }
 }

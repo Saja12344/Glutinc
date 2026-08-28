@@ -173,15 +173,20 @@ struct ProductDetailView: View {
 
     private var glutenHitsToShow: [String] {
         let wantArabic = languageStore.isArabic
-        return post.detectedIngredients.filter { name in
+        var seen = Set<String>()
+        return post.detectedIngredients.compactMap { name -> String? in
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard trimmed.count <= 48, trimmed.count >= 2 else { return false }
+            guard trimmed.count >= 2 else { return nil }
             let lower = trimmed.lowercased()
             guard !lower.contains("nutrition")
                 && !lower.contains("حقائق")
                 && !lower.contains("servings")
-                && !lower.contains("calories") else { return false }
-            return IngredientLanguage.matches(trimmed, arabic: wantArabic)
+                && !lower.contains("calories") else { return nil }
+            guard let visible = IngredientLanguage.display(trimmed, arabic: wantArabic) else { return nil }
+            guard visible.count <= 80 else { return nil }
+            let key = visible.lowercased()
+            guard seen.insert(key).inserted else { return nil }
+            return visible
         }
     }
 
@@ -212,7 +217,10 @@ struct ProductDetailView: View {
 
     @ViewBuilder
     private var manufacturerSection: some View {
-        if !post.manufacturerWarnings.isEmpty {
+        let warnings = post.manufacturerWarnings.compactMap {
+            IngredientLanguage.display($0, arabic: languageStore.isArabic)
+        }
+        if !warnings.isEmpty {
             sectionContainer(title: L10n.t("Manufacturer warnings", ar: "تحذيرات الشركة المصنعة"), icon: "exclamationmark.triangle") {
                 Text(L10n.t(
                     "These warnings are separate from ingredient detection. Missing warnings do not prove the product is free from cross-contact.",
@@ -220,7 +228,7 @@ struct ProductDetailView: View {
                 ))
                 .font(.footnote)
                 .foregroundStyle(AppColors.textSecondary)
-                ForEach(post.manufacturerWarnings, id: \.self) { warning in
+                ForEach(warnings, id: \.self) { warning in
                     Text("• \(warning)").foregroundStyle(AppColors.warning)
                 }
             }
@@ -238,9 +246,6 @@ struct ProductDetailView: View {
             labeledRow(L10n.t("Category", ar: "التصنيف"), post.category)
             if !post.price.trimmingCharacters(in: .whitespaces).isEmpty {
                 labeledRow(L10n.t("Price", ar: "السعر"), post.price)
-            }
-            if let barcode = post.barcode, !barcode.isEmpty {
-                labeledRow(L10n.t("Barcode", ar: "الباركود"), barcode)
             }
             if post.rating > 0 {
                 labeledRow(L10n.t("Contributor rating", ar: "تقييم المساهم"), String(format: "%.0f / 5", post.rating))

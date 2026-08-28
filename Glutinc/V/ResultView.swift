@@ -208,7 +208,12 @@ struct ResultView: View {
     }
 
     private func hitsForAppLanguage(_ hits: [IngredientHit]) -> [IngredientHit] {
-        hits.filter { IngredientLanguage.matches($0.name, arabic: languageStore.isArabic) }
+        hits.compactMap { hit in
+            guard let name = IngredientLanguage.display(hit.name, arabic: languageStore.isArabic) else {
+                return nil
+            }
+            return IngredientHit(name: name, kind: hit.kind)
+        }
     }
 
     @ViewBuilder
@@ -256,7 +261,7 @@ struct ResultView: View {
                         Text(L10n.t("Text we couldn't identify", ar: "نصوص تعذر التعرّف عليها"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(AppColors.textPrimary)
-                        ForEach(analysis.unknownHits) { hit in
+                        ForEach(hitsForAppLanguage(analysis.unknownHits)) { hit in
                             ingredientRow(hit.name, color: AppColors.textSecondary)
                         }
                     }
@@ -264,15 +269,16 @@ struct ResultView: View {
                         Text(L10n.t("Possible OCR issue detected", ar: "تم اكتشاف مشكلة محتملة في قراءة النص"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(AppColors.textPrimary)
-                        ForEach(analysis.possibleOCRHits) { hit in
+                        ForEach(hitsForAppLanguage(analysis.possibleOCRHits)) { hit in
                             ingredientRow(hit.name, color: AppColors.warning)
                         }
                     }
-                    if !raw.isEmpty {
+                    if let visibleRaw = IngredientLanguage.display(raw, arabic: languageStore.isArabic),
+                       !visibleRaw.isEmpty {
                         Text(L10n.t("Full scanned text", ar: "النص الكامل من المسح"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(AppColors.textPrimary)
-                        Text(raw)
+                        Text(visibleRaw)
                             .font(.footnote)
                             .foregroundStyle(AppColors.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -295,7 +301,8 @@ struct ResultView: View {
 
     @ViewBuilder
     private var manufacturerSection: some View {
-        if !analysis.manufacturerWarnings.isEmpty {
+        let warnings = hitsForAppLanguage(analysis.manufacturerWarnings)
+        if !warnings.isEmpty {
             card(title: L10n.t("Manufacturer warnings", ar: "تحذيرات الشركة المصنعة")) {
                 Text(L10n.t(
                     "These warnings come from the label text and are separate from ingredient detection. Their absence does not mean the product is free from cross-contact.",
@@ -303,7 +310,7 @@ struct ResultView: View {
                 ))
                 .font(.footnote)
                 .foregroundStyle(AppColors.textSecondary)
-                ForEach(analysis.manufacturerWarnings) { warning in
+                ForEach(warnings) { warning in
                     ingredientRow(warning.name, color: AppColors.warning)
                 }
             }
