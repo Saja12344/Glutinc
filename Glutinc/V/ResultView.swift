@@ -242,9 +242,7 @@ struct ResultView: View {
 
     @ViewBuilder
     private var scannedDetailsSection: some View {
-        let raw = analysis.originalOCRText.isEmpty ? analysis.extractedText : analysis.originalOCRText
-        let hasDetails = !raw.isEmpty
-            || !analysis.unknownHits.isEmpty
+        let hasDetails = !analysis.unknownHits.isEmpty
             || !analysis.possibleOCRHits.isEmpty
             || analysis.scanQuality != .good
         if hasDetails {
@@ -272,16 +270,6 @@ struct ResultView: View {
                         ForEach(hitsForAppLanguage(analysis.possibleOCRHits)) { hit in
                             ingredientRow(hit.name, color: AppColors.warning)
                         }
-                    }
-                    if let visibleRaw = IngredientLanguage.display(raw, arabic: languageStore.isArabic),
-                       !visibleRaw.isEmpty {
-                        Text(L10n.t("Full scanned text", ar: "النص الكامل من المسح"))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppColors.textPrimary)
-                        Text(visibleRaw)
-                            .font(.footnote)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.top, 8)
