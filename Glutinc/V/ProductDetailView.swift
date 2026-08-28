@@ -36,11 +36,6 @@ struct ProductDetailView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(AppColors.teal)
                             .accessibilityLabel(L10n.t("Verified Product", ar: "منتج موثّق"))
-                    } else {
-                        Text(post.verificationStatus.title)
-                            .font(.subheadline)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .accessibilityLabel(post.verificationStatus.title)
                     }
 
                     Label(post.isCertifiedGlutenFree
