@@ -97,6 +97,18 @@ final class FirebaseCommunityService {
         }
     }
 
+    func deleteProduct(id: String, recordName: String?, completion: @escaping (Bool) -> Void) {
+        queue.async {
+            var items = self.loadStoredProducts()
+            items.removeAll { item in
+                item.id == id || (recordName.map { item.recordName == $0 || item.id == $0 } ?? false)
+            }
+            self.writeStoredProducts(items)
+            try? self.fm.removeItem(at: self.imageURL(id))
+            DispatchQueue.main.async { completion(true) }
+        }
+    }
+
     func fetchProducts(completion: @escaping ([ProductModel]) -> Void) {
         queue.async {
             let products = self.loadStoredProducts().compactMap { self.model(from: $0) }

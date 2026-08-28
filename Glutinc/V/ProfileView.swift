@@ -17,6 +17,7 @@ struct ProfileContentView: View {
 
     @EnvironmentObject var vm: UserCloudVM
     @State private var selectedSegment: Int = 1
+    @State private var postToDelete: ProductModel?
 
     private var isAR: Bool { L10n.isArabic }
 
@@ -53,15 +54,23 @@ struct ProfileContentView: View {
 
                 ScrollView {
                     if selectedSegment == 1 {
-                        postsGrid(items: vm.myPosts, emptyText: L10n.t(
-                            "Posts you publish from this account appear here.",
-                            ar: "تظهر هنا المنشورات التي تنشرها من هذا الحساب."
-                        ))
+                        postsGrid(
+                            items: vm.myPosts,
+                            emptyText: L10n.t(
+                                "Posts you publish from this account appear here.",
+                                ar: "تظهر هنا المنشورات التي تنشرها من هذا الحساب."
+                            ),
+                            allowsDelete: true
+                        )
                     } else {
-                        postsGrid(items: vm.savedProducts, emptyText: L10n.t(
-                            "Saved posts appear here after you bookmark them.",
-                            ar: "تظهر المنشورات المحفوظة هنا بعد حفظها."
-                        ))
+                        postsGrid(
+                            items: vm.savedProducts,
+                            emptyText: L10n.t(
+                                "Saved posts appear here after you bookmark them.",
+                                ar: "تظهر المنشورات المحفوظة هنا بعد حفظها."
+                            ),
+                            allowsDelete: false
+                        )
                     }
                 }
             }
@@ -72,6 +81,29 @@ struct ProfileContentView: View {
         .onAppear {
             vm.loadExploreProducts()
             vm.loadModerationState()
+        }
+        .confirmationDialog(
+            L10n.t("Delete this post?", ar: "حذف هذا المنشور؟"),
+            isPresented: Binding(
+                get: { postToDelete != nil },
+                set: { if !$0 { postToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L10n.t("Delete", ar: "حذف"), role: .destructive) {
+                if let post = postToDelete {
+                    vm.deleteMyPost(post)
+                }
+                postToDelete = nil
+            }
+            Button(L10n.t("Cancel", ar: "إلغاء"), role: .cancel) {
+                postToDelete = nil
+            }
+        } message: {
+            Text(L10n.t(
+                "This removes the post from Explore and your profile.",
+                ar: "سيُزال المنشور من الاستكشاف ومن ملفك."
+            ))
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -87,7 +119,7 @@ struct ProfileContentView: View {
     }
 
     @ViewBuilder
-    private func postsGrid(items: [ProductModel], emptyText: String) -> some View {
+    private func postsGrid(items: [ProductModel], emptyText: String, allowsDelete: Bool) -> some View {
         if items.isEmpty {
             Text(emptyText)
                 .font(.footnote)
@@ -98,19 +130,44 @@ struct ProfileContentView: View {
                 .padding(.horizontal)
         } else {
             LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: 16
+                columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ],
+                spacing: 12
             ) {
                 ForEach(items) { post in
-                    NavigationLink {
-                        ProductDetailView(post: post)
-                    } label: {
-                        Image(uiImage: post.image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 140)
-                            .clipped()
-                            .cornerRadius(14)
+                    ZStack(alignment: .topTrailing) {
+                        NavigationLink {
+                            ProductDetailView(post: post)
+                        } label: {
+                            Color.clear
+                                .aspectRatio(1, contentMode: .fit)
+                                .overlay {
+                                    Image(uiImage: post.image)
+                                        .resizable()
+                                        .scaledToFill()
+                                }
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+
+                        if allowsDelete {
+                            Button {
+                                postToDelete = post
+                            } label: {
+                                Image(systemName: "trash.circle.fill")
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, AppColors.danger)
+                                    .font(.system(size: 24))
+                                    .shadow(color: .black.opacity(0.35), radius: 4, y: 1)
+                                    .padding(6)
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel(L10n.t("Delete post", ar: "حذف المنشور"))
+                        }
                     }
                 }
             }

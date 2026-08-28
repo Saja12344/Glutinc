@@ -9,12 +9,12 @@ struct ProductDetailView: View {
     @State private var showReport = false
     @State private var showCorrection = false
     @State private var showBlockConfirm = false
+    @State private var showDeleteConfirm = false
     @State private var selectedReportReason: ReportReason = .other
     @State private var selectedCorrection: ProductCorrectionReason = .other
     @State private var detailsText = ""
     @State private var feedback: String?
     @State private var showProductInfo = false
-    @State private var showVerification = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -66,7 +66,6 @@ struct ProductDetailView: View {
                 .padding(.horizontal)
 
                 productInfoSection
-                verificationSection
                 whyThisResult
                 manufacturerSection
             }
@@ -99,7 +98,13 @@ struct ProductDetailView: View {
                     } label: {
                         Label(L10n.t("Report user / community content", ar: "الإبلاغ عن مستخدم أو محتوى مجتمع"), systemImage: "exclamationmark.bubble")
                     }
-                    if !post.ownerAppleID.isEmpty, post.ownerAppleID != vm.signedUser?.id {
+                    if vm.owns(post) {
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label(L10n.t("Delete post", ar: "حذف المنشور"), systemImage: "trash")
+                        }
+                    } else if !post.ownerAppleID.isEmpty, post.ownerAppleID != vm.signedUser?.id {
                         Button(role: .destructive) {
                             guard vm.isSignedIn else {
                                 showSignIn = true
@@ -142,6 +147,23 @@ struct ProductDetailView: View {
                 dismiss()
             }
             Button(L10n.t("Cancel", ar: "إلغاء"), role: .cancel) {}
+        }
+        .confirmationDialog(
+            L10n.t("Delete this post?", ar: "حذف هذا المنشور؟"),
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.t("Delete", ar: "حذف"), role: .destructive) {
+                vm.deleteMyPost(post) { ok in
+                    if ok { dismiss() }
+                }
+            }
+            Button(L10n.t("Cancel", ar: "إلغاء"), role: .cancel) {}
+        } message: {
+            Text(L10n.t(
+                "This removes the post from Explore and your profile.",
+                ar: "سيُزال المنشور من الاستكشاف ومن ملفك."
+            ))
         }
         .onChange(of: vm.isSignedIn) { signedIn in
             if signedIn, case .save(let id) = vm.pendingAuthAction, id == post.id {
@@ -209,6 +231,7 @@ struct ProductDetailView: View {
             isExpanded: $showProductInfo
         ) {
             labeledRow(L10n.t("Contributor", ar: "المساهم"), "@\(post.username)")
+            labeledRow(L10n.t("Data source", ar: "مصدر البيانات"), localizedDataSource)
             labeledRow(L10n.t("Category", ar: "التصنيف"), post.category)
             if !post.price.trimmingCharacters(in: .whitespaces).isEmpty {
                 labeledRow(L10n.t("Price", ar: "السعر"), post.price)
@@ -228,20 +251,12 @@ struct ProductDetailView: View {
         }
     }
 
-    private var verificationSection: some View {
-        collapsibleSection(
-            title: L10n.t("Verification information", ar: "معلومات التوثيق"),
-            icon: "checkmark.seal",
-            isExpanded: $showVerification
-        ) {
-            labeledRow(L10n.t("Status", ar: "الحالة"), post.verificationStatus.title)
-            labeledRow(L10n.t("Data source", ar: "مصدر البيانات"), post.dataSource)
-            if let date = post.lastVerifiedAt {
-                labeledRow(L10n.t("Last verified", ar: "آخر توثيق"), date.formatted(date: .abbreviated, time: .omitted))
-            }
-            if let source = post.certificationSource, post.isCertifiedGlutenFree {
-                labeledRow(L10n.t("Certification source", ar: "مصدر الاعتماد"), source)
-            }
+    private var localizedDataSource: String {
+        switch post.dataSource.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "community", "":
+            return L10n.t("Community", ar: "المجتمع")
+        default:
+            return post.dataSource
         }
     }
 

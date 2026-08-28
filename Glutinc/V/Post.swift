@@ -2,7 +2,6 @@
 import SwiftUI
 import PhotosUI
 import UIKit
-import MapKit   // لو حابة تطوريه لاحقًا للبحث الحقيقي
 
 struct Post: View {
     
@@ -41,8 +40,6 @@ struct Post: View {
     @State private var submitMessage: String?
     @State private var existingMatch: ProductModel?
     
-    // ✅ شاشة اختيار اللوكيشن (لو حبيتي تطوريها لاحقًا)
-    @State private var showLocationSearch = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var showImageOptions = false
     @State private var showCamera = false
@@ -178,18 +175,12 @@ struct Post: View {
                             )
                         
                         
-                        // MARK: - Location (بحث يشبه لوكت/سناب)
-                        Button {
-                            showLocationSearch = true
-                        } label: {
-                            HStack {
-                                Text(location.isEmpty ? L10n.t("Found at (optional)", ar: "تم العثور عليه في (اختياري)") : location)
-                                    .font(.body)
-                                    .foregroundColor(location.isEmpty ? .secondary : .primary)
-                                    .lineLimit(1)
-                                Spacer()
-                            }
-                        }
+                        // MARK: - Location (optional, same page)
+                        glassTextField(
+                            L10n.t("Found at (optional)", ar: "تم العثور عليه في (اختياري)"),
+                            text: $location
+                        )
+                        .foregroundColor(.primary)
                         .formField(
                             isInvalid: false,
                             isEditing: false
@@ -313,10 +304,6 @@ struct Post: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showLocationSearch) {
-                // شاشة بسيطة مؤقتًا – تقدري تطوريها لاحقًا للبحث الحقيقي
-                SimpleLocationSearchView(selectedLocation: $location)
-            }
             .sheet(isPresented: $showCamera) {   // 🟢🟢🟢 هنا بالضبط
                          CameraView(
                              cloudVM: cloudVM,
@@ -447,62 +434,10 @@ struct Post: View {
             }
             completion(success)
         }
-    }
-
-
-    //}
-    struct SimpleLocationSearchView: View {
-        @Environment(\.dismiss) private var dismiss
-        @Binding var selectedLocation: String
-        @State private var query: String = ""
-        
-        var body: some View {
-            NavigationStack {
-                VStack {
-                    TextField("Search location…", text: $query)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.secondarySystemBackground))
-                        )
-                        .padding()
-                    
-                    // مؤقت: لما يضغط Save نخلي القيمة اللي كتبها هي اللوكيشن
-                    Spacer()
-                    
-                    Button {
-                        if !query.trimmingCharacters(in: .whitespaces).isEmpty {
-                            selectedLocation = query
-                        }
-                        dismiss()
-                    } label: {
-                        Text("Save location")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .foregroundColor(.white)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.accentColor)
-                            )
-                            .padding(.horizontal)
-                    }
-                    
-                    Spacer()
-                }
-                .navigationTitle("Location")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                    }
-                }
-            }
         }
+
+
     }
-    
-}
 extension View {
     func formField(isInvalid: Bool, isEditing: Bool) -> some View {
         self.modifier(FormFieldStyle(isInvalid: isInvalid, isEditing: isEditing))

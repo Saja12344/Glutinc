@@ -212,6 +212,24 @@ final class UserCloudVM: ObservableObject {
         return products.filter { ids.contains($0.ownerAppleID) }
     }
 
+    func owns(_ product: ProductModel) -> Bool {
+        myPosts.contains(where: { $0.id == product.id })
+    }
+
+    func deleteMyPost(_ product: ProductModel, completion: @escaping (Bool) -> Void = { _ in }) {
+        guard owns(product) else {
+            completion(false)
+            return
+        }
+        ck.deleteProduct(id: product.id, recordName: product.recordName) { ok in
+            if ok {
+                self.products.removeAll { $0.id == product.id }
+                self.savedProductIDs.remove(product.id)
+            }
+            completion(ok)
+        }
+    }
+
 
 
     // MARK: - ✅ تسجيل الدخول بـ Apple + CloudKit
