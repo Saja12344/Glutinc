@@ -188,12 +188,7 @@ private struct PostRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .topTrailing) {
-                Image(uiImage: post.image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 180)
-                    .clipped()
-                    .cornerRadius(16)
+                ProductPhotoFrame(image: post.image, ratio: 4 / 3, cornerRadius: 16)
 
                 Button {
                     onSave(post.id)

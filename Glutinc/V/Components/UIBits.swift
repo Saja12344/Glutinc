@@ -66,3 +66,27 @@ struct ProductCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
+
+/// Fixed photo well so every product image sits in the same frame.
+struct ProductPhotoFrame: View {
+    let image: UIImage
+    var ratio: CGFloat = 4 / 3
+    var cornerRadius: CGFloat = 18
+
+    var body: some View {
+        GeometryReader { geo in
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
+        }
+        .aspectRatio(ratio, contentMode: .fit)
+        .background(AppColors.navy3)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(AppColors.border, lineWidth: 1)
+        )
+    }
+}

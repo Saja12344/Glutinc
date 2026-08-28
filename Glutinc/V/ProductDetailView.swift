@@ -15,16 +15,13 @@ struct ProductDetailView: View {
     @State private var detailsText = ""
     @State private var feedback: String?
     @State private var showProductInfo = false
+    @State private var showWhyThisResult = false
+    @ObservedObject private var languageStore = LanguageStore.shared
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
-                Image(uiImage: post.image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity)
-                    .frame(maxHeight: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                ProductPhotoFrame(image: post.image, ratio: 4 / 3, cornerRadius: 22)
                     .padding(.horizontal)
                     .padding(.top, 12)
                     .accessibilityLabel(post.productName)
@@ -99,10 +96,10 @@ struct ProductDetailView: View {
                         Label(L10n.t("Report user / community content", ar: "الإبلاغ عن مستخدم أو محتوى مجتمع"), systemImage: "exclamationmark.bubble")
                     }
                     if vm.owns(post) {
-                        Button(role: .destructive) {
+                        Button {
                             showDeleteConfirm = true
                         } label: {
-                            Label(L10n.t("Delete post", ar: "حذف المنشور"), systemImage: "trash")
+                            Label(L10n.t("Delete post", ar: "حذف المنشور"), systemImage: "xmark.circle")
                         }
                     } else if !post.ownerAppleID.isEmpty, post.ownerAppleID != vm.signedUser?.id {
                         Button(role: .destructive) {
@@ -175,19 +172,25 @@ struct ProductDetailView: View {
     }
 
     private var glutenHitsToShow: [String] {
-        post.detectedIngredients.filter { name in
+        let wantArabic = languageStore.isArabic
+        return post.detectedIngredients.filter { name in
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard trimmed.count <= 48, trimmed.count >= 2 else { return false }
             let lower = trimmed.lowercased()
-            return !lower.contains("nutrition")
+            guard !lower.contains("nutrition")
                 && !lower.contains("حقائق")
                 && !lower.contains("servings")
-                && !lower.contains("calories")
+                && !lower.contains("calories") else { return false }
+            return IngredientLanguage.matches(trimmed, arabic: wantArabic)
         }
     }
 
     private var whyThisResult: some View {
-        sectionContainer(title: L10n.t("Why this result?", ar: "لماذا ظهرت هذه النتيجة؟"), icon: "text.magnifyingglass") {
+        collapsibleSection(
+            title: L10n.t("Why this result?", ar: "لماذا ظهرت هذه النتيجة؟"),
+            icon: "text.magnifyingglass",
+            isExpanded: $showWhyThisResult
+        ) {
             VStack(alignment: .leading, spacing: 8) {
                 if post.ingredientCount > 0 {
                     Text("\(post.ingredientCount) " + L10n.t("ingredients analyzed", ar: "مكوّنًا تم تحليلها"))

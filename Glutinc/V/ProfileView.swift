@@ -141,16 +141,7 @@ struct ProfileContentView: View {
                         NavigationLink {
                             ProductDetailView(post: post)
                         } label: {
-                            Color.clear
-                                .aspectRatio(1, contentMode: .fit)
-                                .overlay {
-                                    Image(uiImage: post.image)
-                                        .resizable()
-                                        .scaledToFill()
-                                }
-                                .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            ProductPhotoFrame(image: post.image, ratio: 1, cornerRadius: 16)
                         }
                         .buttonStyle(.plain)
 
@@ -158,14 +149,19 @@ struct ProfileContentView: View {
                             Button {
                                 postToDelete = post
                             } label: {
-                                Image(systemName: "trash.circle.fill")
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(.white, AppColors.danger)
-                                    .font(.system(size: 24))
-                                    .shadow(color: .black.opacity(0.35), radius: 4, y: 1)
-                                    .padding(6)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(AppColors.textPrimary)
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(AppColors.border, lineWidth: 1)
+                                    )
                             }
                             .buttonStyle(.borderless)
+                            .padding(8)
                             .accessibilityLabel(L10n.t("Delete post", ar: "حذف المنشور"))
                         }
                     }

@@ -17,6 +17,7 @@ struct ResultView: View {
     @State private var goToPost = false
     @State private var showSignIn = false
     @State private var showScannedDetails = false
+    @ObservedObject private var languageStore = LanguageStore.shared
 
     var body: some View {
         VStack(spacing: 12) {
@@ -206,11 +207,16 @@ struct ResultView: View {
         .padding(.horizontal)
     }
 
+    private func hitsForAppLanguage(_ hits: [IngredientHit]) -> [IngredientHit] {
+        hits.filter { IngredientLanguage.matches($0.name, arabic: languageStore.isArabic) }
+    }
+
     @ViewBuilder
     private var glutenSection: some View {
-        if !analysis.glutenHits.isEmpty {
+        let hits = hitsForAppLanguage(analysis.glutenHits)
+        if !hits.isEmpty {
             card(title: L10n.t("Ingredients that triggered this result", ar: "المكونات التي أدت إلى هذه النتيجة")) {
-                ForEach(analysis.glutenHits) { hit in
+                ForEach(hits) { hit in
                     ingredientRow(hit.name, color: AppColors.danger)
                 }
             }
@@ -219,9 +225,10 @@ struct ResultView: View {
 
     @ViewBuilder
     private var reviewIngredientsSection: some View {
-        if !analysis.ambiguousHits.isEmpty {
+        let hits = hitsForAppLanguage(analysis.ambiguousHits)
+        if !hits.isEmpty {
             card(title: L10n.t("Ingredients that need review", ar: "مكونات تحتاج إلى مراجعة")) {
-                ForEach(analysis.ambiguousHits) { hit in
+                ForEach(hits) { hit in
                     ingredientRow(hit.name, color: AppColors.warning)
                 }
             }
