@@ -14,7 +14,8 @@ struct CameraView: View {
     @Binding var selectedTab: HomeTab
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
+            GeometryReader { geo in
             ZStack {
                 // خلفية الكاميرا
                 CameraPreview(session: cameraVM.session)
@@ -25,10 +26,11 @@ struct CameraView: View {
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onEnded { value in
-                                let screenSize = UIScreen.main.bounds.size
+                                let size = geo.size
+                                guard size.width > 0, size.height > 0 else { return }
                                 let focusPoint = CGPoint(
-                                    x: value.location.x / screenSize.width,
-                                    y: value.location.y / screenSize.height
+                                    x: value.location.x / size.width,
+                                    y: value.location.y / size.height
                                 )
                                 cameraVM.focus(at: focusPoint)
                             }
@@ -187,16 +189,18 @@ struct CameraView: View {
                             }
                         )
                         .environmentObject(cloudVM)
+                        .frame(maxWidth: min(720, geo.size.width))
                         .frame(
                             height: cameraVM.analysis.status == .unreadableIngredients
-                            ? UIScreen.main.bounds.height * 0.72
+                            ? geo.size.height * 0.72
                             : (cameraVM.glutenFound.isEmpty
-                               ? UIScreen.main.bounds.height * 0.55
-                               : UIScreen.main.bounds.height * 0.65)
+                               ? geo.size.height * 0.55
+                               : geo.size.height * 0.65)
                         )
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .shadow(radius: 12)
+                        .frame(maxWidth: .infinity, alignment: .bottom)
                         .ignoresSafeArea(edges: .bottom)
                     }
                     .transition(.move(edge: .bottom))
@@ -239,6 +243,7 @@ struct CameraView: View {
             }
             .navigationBarHidden(true)
             .environmentObject(cloudVM)
+            }
         }
     }
 

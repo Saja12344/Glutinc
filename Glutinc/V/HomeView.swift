@@ -89,6 +89,7 @@ struct HomeView: View {
                         .padding(.horizontal, 16)
                     }
                 }
+                .glutincContentWidth()
             }
             .navigationTitle(L10n.t("Explore", ar: "استكشف"))
             .navigationBarTitleDisplayMode(.large)

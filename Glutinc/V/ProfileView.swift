@@ -74,6 +74,7 @@ struct ProfileContentView: View {
                     }
                 }
             }
+            .glutincContentWidth()
           
             .navigationTitle(L10n.t("Profile", ar: "الملف الشخصي"))
             .navigationBarTitleDisplayMode(.inline)
@@ -130,10 +131,7 @@ struct ProfileContentView: View {
                 .padding(.horizontal)
         } else {
             LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 12),
-                    GridItem(.flexible(), spacing: 12)
-                ],
+                columns: [GridItem(.adaptive(minimum: 160), spacing: 12)],
                 spacing: 12
             ) {
                 ForEach(items) { post in

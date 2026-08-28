@@ -301,6 +301,7 @@ struct Post: View {
                         
                     }
                     .padding(16)
+                    .glutincContentWidth()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

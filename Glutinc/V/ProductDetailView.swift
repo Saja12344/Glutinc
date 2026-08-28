@@ -62,6 +62,7 @@ struct ProductDetailView: View {
                 manufacturerSection
             }
             .padding(.bottom, 32)
+            .glutincContentWidth()
         }
         .background(BackgroundView())
         .navigationTitle(L10n.t("Details", ar: "التفاصيل"))

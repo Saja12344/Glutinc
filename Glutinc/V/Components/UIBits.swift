@@ -67,6 +67,18 @@ struct ProductCard: View {
     }
 }
 
+enum GlutincLayout {
+    static let contentMaxWidth: CGFloat = 720
+}
+
+extension View {
+    /// Keeps phone layouts readable on iPad instead of stretching edge to edge.
+    func glutincContentWidth() -> some View {
+        frame(maxWidth: GlutincLayout.contentMaxWidth)
+            .frame(maxWidth: .infinity)
+    }
+}
+
 /// Fixed photo well so every product image sits in the same frame.
 struct ProductPhotoFrame: View {
     let image: UIImage
