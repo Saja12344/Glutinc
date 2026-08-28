@@ -13,14 +13,17 @@ struct ProductDetailView: View {
     @State private var selectedCorrection: ProductCorrectionReason = .other
     @State private var detailsText = ""
     @State private var feedback: String?
+    @State private var showProductInfo = false
+    @State private var showVerification = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
                 Image(uiImage: post.image)
                     .resizable()
-                    .scaledToFill()
-                    .frame(height: 260)
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -62,14 +65,10 @@ struct ProductDetailView: View {
                 }
                 .padding(.horizontal)
 
-                whyThisResult
-
-                ingredientsSection
-                manufacturerSection
                 productInfoSection
-                foundAtSection
-                communityNoteSection
                 verificationSection
+                whyThisResult
+                manufacturerSection
             }
             .padding(.bottom, 32)
         }
@@ -153,6 +152,18 @@ struct ProductDetailView: View {
         }
     }
 
+    private var glutenHitsToShow: [String] {
+        post.detectedIngredients.filter { name in
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.count <= 48, trimmed.count >= 2 else { return false }
+            let lower = trimmed.lowercased()
+            return !lower.contains("nutrition")
+                && !lower.contains("حقائق")
+                && !lower.contains("servings")
+                && !lower.contains("calories")
+        }
+    }
+
     private var whyThisResult: some View {
         sectionContainer(title: L10n.t("Why this result?", ar: "لماذا ظهرت هذه النتيجة؟"), icon: "text.magnifyingglass") {
             VStack(alignment: .leading, spacing: 8) {
@@ -160,47 +171,17 @@ struct ProductDetailView: View {
                     Text("\(post.ingredientCount) " + L10n.t("ingredients analyzed", ar: "مكوّنًا تم تحليلها"))
                 }
                 Text(post.glutenAnalysisStatus.fullLabel)
-                if post.glutenAnalysisStatus == .containsGluten, !post.detectedIngredients.isEmpty {
+                if post.glutenAnalysisStatus == .containsGluten, !glutenHitsToShow.isEmpty {
                     Text(L10n.t("Gluten-containing ingredients detected:", ar: "مكونات تحتوي على الغلوتين:"))
-                    ForEach(post.detectedIngredients, id: \.self) { item in
+                    ForEach(glutenHitsToShow, id: \.self) { item in
                         Text("• \(item)")
                     }
                 } else if post.glutenAnalysisStatus == .uncertain {
                     Text(L10n.t("Some ingredients could not be confidently classified.", ar: "تعذر تصنيف بعض المكونات بشكل مؤكد."))
                 }
-                if post.manufacturerWarnings.isEmpty {
-                    Text(L10n.t("No manufacturer warning available", ar: "لا يتوفر تحذير من الشركة المصنعة"))
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-                if let date = post.lastVerifiedAt {
-                    Text(L10n.t("Last verified", ar: "آخر توثيق") + ": " + date.formatted(date: .abbreviated, time: .omitted))
-                }
             }
             .font(.subheadline)
             .foregroundStyle(AppColors.textPrimary)
-        }
-    }
-
-    @ViewBuilder
-    private var ingredientsSection: some View {
-        if let text = post.ingredientText, !text.isEmpty {
-            sectionContainer(title: L10n.t("Ingredients", ar: "المكونات"), icon: "list.bullet") {
-                Text(text)
-                    .font(.footnote)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .textSelection(.enabled)
-            }
-        } else if !post.detectedIngredients.isEmpty {
-            sectionContainer(title: L10n.t("Ingredients", ar: "المكونات"), icon: "list.bullet") {
-                ForEach(post.detectedIngredients, id: \.self) { item in
-                    Text("• \(item)").foregroundStyle(AppColors.textPrimary)
-                }
-            }
-        } else {
-            sectionContainer(title: L10n.t("Ingredients", ar: "المكونات"), icon: "list.bullet") {
-                Text(L10n.t("No ingredients available", ar: "لا تتوفر مكونات"))
-                    .foregroundStyle(AppColors.textSecondary)
-            }
         }
     }
 
@@ -222,7 +203,12 @@ struct ProductDetailView: View {
     }
 
     private var productInfoSection: some View {
-        sectionContainer(title: L10n.t("Product information", ar: "معلومات المنتج"), icon: "info.circle") {
+        collapsibleSection(
+            title: L10n.t("Product information", ar: "معلومات المنتج"),
+            icon: "info.circle",
+            isExpanded: $showProductInfo
+        ) {
+            labeledRow(L10n.t("Contributor", ar: "المساهم"), "@\(post.username)")
             labeledRow(L10n.t("Category", ar: "التصنيف"), post.category)
             if !post.price.trimmingCharacters(in: .whitespaces).isEmpty {
                 labeledRow(L10n.t("Price", ar: "السعر"), post.price)
@@ -233,35 +219,21 @@ struct ProductDetailView: View {
             if post.rating > 0 {
                 labeledRow(L10n.t("Contributor rating", ar: "تقييم المساهم"), String(format: "%.0f / 5", post.rating))
             }
-        }
-    }
-
-    @ViewBuilder
-    private var foundAtSection: some View {
-        if !post.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            sectionContainer(title: L10n.t("Found at", ar: "تم العثور عليه في"), icon: "mappin.and.ellipse") {
-                Text(post.location).foregroundStyle(AppColors.textPrimary)
+            if !post.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                labeledRow(L10n.t("Found at", ar: "تم العثور عليه في"), post.location)
             }
-        }
-    }
-
-    @ViewBuilder
-    private var communityNoteSection: some View {
-        if let notes = post.notes, !notes.isEmpty {
-            sectionContainer(title: L10n.t("Community note", ar: "ملاحظة من المجتمع"), icon: "text.quote") {
-                Text(notes).foregroundStyle(AppColors.textPrimary)
-                Text("@\(post.username)")
-                    .font(.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-                Text(L10n.t("Community content is shared by users and is not medical advice.", ar: "محتوى المجتمع يشاركه المستخدمون ولا يُعد استشارة طبية."))
-                    .font(.footnote)
-                    .foregroundStyle(AppColors.textSecondary)
+            if let notes = post.notes, !notes.isEmpty {
+                labeledRow(L10n.t("Community note", ar: "ملاحظة من المجتمع"), notes)
             }
         }
     }
 
     private var verificationSection: some View {
-        sectionContainer(title: L10n.t("Verification information", ar: "معلومات التوثيق"), icon: "checkmark.seal") {
+        collapsibleSection(
+            title: L10n.t("Verification information", ar: "معلومات التوثيق"),
+            icon: "checkmark.seal",
+            isExpanded: $showVerification
+        ) {
             labeledRow(L10n.t("Status", ar: "الحالة"), post.verificationStatus.title)
             labeledRow(L10n.t("Data source", ar: "مصدر البيانات"), post.dataSource)
             if let date = post.lastVerifiedAt {
@@ -381,6 +353,48 @@ struct ProductDetailView: View {
             content()
         }
         .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppColors.card)
+        )
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func collapsibleSection<Content: View>(
+        title: String,
+        icon: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        DetailDisclosureCard(
+            title: title,
+            icon: icon,
+            isExpanded: isExpanded,
+            content: content()
+        )
+    }
+}
+
+private struct DetailDisclosureCard<Content: View>: View {
+    let title: String
+    let icon: String
+    @Binding var isExpanded: Bool
+    let content: Content
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            content
+                .padding(.top, 8)
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundStyle(AppColors.textPrimary)
+        }
+        .tint(AppColors.teal)
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(AppColors.card)
