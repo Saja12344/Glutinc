@@ -34,11 +34,15 @@ struct IngredientCropView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: geo.size.width, height: geo.size.height)
+                            .flipsForRightToLeftLayoutDirection(false)
 
                         cropOverlay(in: fitted)
                             .gesture(cropGesture(in: fitted))
                     }
+                    .environment(\.layoutDirection, .leftToRight)
                 }
+                .environment(\.layoutDirection, .leftToRight)
+                .flipsForRightToLeftLayoutDirection(false)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 HStack(spacing: 12) {

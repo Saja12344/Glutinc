@@ -96,7 +96,7 @@ enum IngredientLexicon {
     ]
 
     private static let glutenDerivatives: [IngredientRule] = [
-        rule("breaded", en: ["breaded", "breading"], ar: ["بقسماط"], classification: .ambiguous, category: .ambiguous, notes: "Often wheat-based; treated as review unless source is declared."),
+        rule("breadcrumbs", en: ["breadcrumbs", "bread crumbs", "breaded", "breading"], ar: ["بقسماط"], classification: .ambiguous, category: .ambiguous, notes: "Often wheat-based; treated as review unless source is declared."),
     ]
 
     private static let oats: [IngredientRule] = [
@@ -157,4 +157,98 @@ enum IngredientLexicon {
     ]
 
     private static let processingAids: [IngredientRule] = []
+
+    static func rule(forCanonical name: String) -> IngredientRule? {
+        let key = ScanTextNormalizer.matchingKey(name)
+        return rules.first { ScanTextNormalizer.matchingKey($0.canonicalName) == key }
+    }
+
+    static func displayName(forCanonical name: String, arabic: Bool) -> String {
+        if let rule = rule(forCanonical: name) {
+            return displayName(rule, arabic: arabic)
+        }
+        return arabic ? name : titleCased(name)
+    }
+
+    static func displayName(_ rule: IngredientRule, arabic: Bool) -> String {
+        if arabic {
+            return rule.aliasesAR.first ?? rule.canonicalName
+        }
+        return titleCased(rule.aliasesEN.first ?? rule.canonicalName)
+    }
+
+    static func isGlutenRisk(_ rule: IngredientRule) -> Bool {
+        switch rule.classification {
+        case .containsGluten:
+            return true
+        case .ambiguous:
+            return rule.category == .oats
+                || rule.canonicalName == "flour"
+                || rule.canonicalName == "breadcrumbs"
+        default:
+            return false
+        }
+    }
+
+    static func isSafeDisplayKeyword(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return false }
+        if trimmed.contains(where: \.isNumber) { return false }
+        if trimmed.unicodeScalars.allSatisfy({ !CharacterSet.letters.contains($0) }) { return false }
+        let key = ScanTextNormalizer.matchingKey(trimmed)
+        return !blockedDisplayKeys.contains(key)
+    }
+
+    /// Resolve stored names (canonical or legacy noisy OCR) into confirmed gluten keywords.
+    static func userFacingKeywords(from stored: [String], arabic: Bool) -> [String] {
+        localizedRules(from: stored, arabic: arabic) { $0.classification == .containsGluten }
+    }
+
+    static func userFacingReviewKeywords(from stored: [String], arabic: Bool) -> [String] {
+        localizedRules(from: stored, arabic: arabic) { isGlutenRisk($0) && $0.classification != .containsGluten }
+    }
+
+    private static func localizedRules(
+        from stored: [String],
+        arabic: Bool,
+        include: (IngredientRule) -> Bool
+    ) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for item in stored {
+            let matched: [IngredientRule]
+            if let exact = rule(forCanonical: item), include(exact) {
+                matched = [exact]
+            } else {
+                matched = IngredientMatcher.matchedRules(in: item).filter(include)
+            }
+            for rule in matched {
+                guard seen.insert(rule.canonicalName).inserted else { continue }
+                let visible = displayName(rule, arabic: arabic)
+                guard isSafeDisplayKeyword(visible) else { continue }
+                result.append(visible)
+            }
+        }
+        return result
+    }
+
+    static func localizedKeywords(canonical names: [String], arabic: Bool) -> [String] {
+        userFacingKeywords(from: names, arabic: arabic)
+    }
+
+    private static func titleCased(_ name: String) -> String {
+        name.split(separator: " ").map { part in
+            part.count <= 2 ? part.uppercased() : part.localizedCapitalized
+        }.joined(separator: " ")
+    }
+
+    private static let blockedDisplayKeys: Set<String> = {
+        let phrases = [
+            "contains", "may contain", "contains:", "may contain:",
+            "يحتوي على", "قد يحتوي على", "يحتوي", "قد يحتوي",
+            "kingdom of bahrain", "bahrain", "مملكة البحرين", "البحرين",
+            "nutrition facts", "calories"
+        ]
+        return Set(phrases.map { ScanTextNormalizer.matchingKey($0) })
+    }()
 }

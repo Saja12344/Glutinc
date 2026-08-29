@@ -131,9 +131,23 @@ enum ScanResultEngine {
         )
         #endif
 
-        let glutenHits = uniqueHits(glutenIngredients.map(\.originalText), kind: .gluten)
-            + uniqueHits(allergenHits.map(\.originalText), kind: .gluten)
-        let ambiguousHits = uniqueHits(ambiguous.map(\.originalText), kind: .ambiguous)
+        let glutenFromIngredients = canonicalNames(
+            from: glutenIngredients.map(\.originalText),
+            matching: { $0.classification == .containsGluten }
+        )
+        let glutenFromAllergens = canonicalNames(
+            from: allergenHits.map(\.originalText),
+            matching: { $0.classification == .containsGluten }
+        )
+        let glutenCanonicals = uniqueCanonicals(glutenFromIngredients + glutenFromAllergens)
+        let ambiguousCanonicals = uniqueCanonicals(
+            canonicalNames(
+                from: ambiguous.map(\.originalText),
+                matching: { $0.classification == .ambiguous }
+            )
+        )
+        let glutenHits = glutenCanonicals.map { IngredientHit(name: $0, kind: .gluten) }
+        let ambiguousHits = ambiguousCanonicals.map { IngredientHit(name: $0, kind: .ambiguous) }
         let unknownHits = uniqueHits(unknown.map(\.originalText), kind: .unknown)
         let warningHits = uniqueHits(crossContact.map(\.originalText), kind: .manufacturerWarning)
         let possibleHits = uniqueHits(
@@ -201,6 +215,32 @@ enum ScanResultEngine {
         if mean < policy.reviewThreshold || lowCount * 2 >= observations.count { return .poor }
         if mean < policy.confidentThreshold || lowCount > 0 { return .partial }
         return .good
+    }
+
+    private static func canonicalNames(
+        from texts: [String],
+        matching include: (IngredientRule) -> Bool
+    ) -> [String] {
+        var names: [String] = []
+        for text in texts {
+            for rule in IngredientMatcher.matchedRules(in: text) where include(rule) {
+                names.append(rule.canonicalName)
+            }
+        }
+        return names
+    }
+
+    private static func uniqueCanonicals(_ names: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for name in names {
+            let key = ScanTextNormalizer.matchingKey(name)
+            guard !key.isEmpty, IngredientLexicon.isSafeDisplayKeyword(name), seen.insert(key).inserted else {
+                continue
+            }
+            result.append(name)
+        }
+        return result
     }
 
     private static func uniqueHits(_ names: [String], kind: IngredientHit.Kind) -> [IngredientHit] {

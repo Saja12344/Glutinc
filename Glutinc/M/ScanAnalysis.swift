@@ -116,8 +116,9 @@ struct ScanAnalysisResult {
     var tooSmallForOCR: Bool
     var skippedClassification: Bool
 
+    /// Canonical gluten-risk keywords only. Never raw OCR.
     var flaggedNames: [String] {
-        (glutenHits + ambiguousHits + unknownHits).map(\.name)
+        glutenHits.map(\.name)
     }
 
     var explanation: String {

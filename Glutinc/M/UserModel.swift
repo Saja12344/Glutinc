@@ -76,7 +76,7 @@ final class UserCloudVM: ObservableObject {
 
 
     private let userDefaultsKey = "loggedInUserId"
-    private let ck = FirebaseCommunityService.shared
+    private let ck = CloudKitService.shared
 
     // ✅ عند تشغيل التطبيق
     init() {
@@ -104,6 +104,7 @@ final class UserCloudVM: ObservableObject {
         ck.saveProduct(product) { success in
             if success {
                 self.products.insert(product, at: 0)
+                self.loadExploreProducts()
                 print("📌 Products count:", self.products.count)
             }
             completion(success)
@@ -112,24 +113,32 @@ final class UserCloudVM: ObservableObject {
 
     func loadProductsFromCloud() {
         ck.fetchProducts { fetched in
-            if !fetched.isEmpty {
-                self.products = fetched
-            }
+            self.applyServerProducts(fetched, exploreOnly: false)
         }
     }
 
     func loadExploreProducts() {
         ck.fetchExploreProducts { fetched in
-            let blocked = self.blockedUserIDs
-            var merged = fetched.filter { !blocked.contains($0.ownerAppleID) }
-            for item in self.products where !merged.contains(where: { $0.id == item.id }) {
-                if !blocked.contains(item.ownerAppleID), item.ownerAppleID != "deleted", item.isEligibleForExplore {
-                    merged.insert(item, at: 0)
-                }
-            }
-            self.products = merged
-            self.hasLoadedProducts = true
+            self.applyServerProducts(fetched, exploreOnly: true)
         }
+    }
+
+    private func applyServerProducts(_ fetched: [ProductModel], exploreOnly: Bool) {
+        let blocked = blockedUserIDs
+        var merged = fetched.filter {
+            !blocked.contains($0.ownerAppleID) && $0.ownerAppleID != "deleted"
+        }
+        if exploreOnly {
+            merged = merged.filter(\.isEligibleForExplore)
+        }
+        for item in products where !merged.contains(where: { $0.id == item.id }) {
+            guard !blocked.contains(item.ownerAppleID), item.ownerAppleID != "deleted" else { continue }
+            if !exploreOnly || item.isEligibleForExplore {
+                merged.insert(item, at: 0)
+            }
+        }
+        products = merged
+        hasLoadedProducts = true
     }
 
     func submitCatalogProduct(_ product: ProductModel, completion: @escaping (Bool, String?) -> Void) {
@@ -147,6 +156,7 @@ final class UserCloudVM: ObservableObject {
         ck.saveProduct(product) { success in
             if success {
                 self.products.insert(product, at: 0)
+                self.loadExploreProducts()
                 completion(true, nil)
             } else {
                 completion(false, L10n.t(
@@ -255,9 +265,9 @@ final class UserCloudVM: ObservableObject {
             )
 
             self.user.appleID = id
+            self.errorMessage = ""
 
-            self.loadProductsFromCloud()
-            self.hasLoadedProducts = true
+            self.loadExploreProducts()
             self.loadModerationState()
             self.saveUserSession(user: self.signedUser!)
 
@@ -373,8 +383,7 @@ final class UserCloudVM: ObservableObject {
 
             self.signedUser = AppUser(id: id, name: name, email: email)
 
-            self.loadProductsFromCloud()
-            self.hasLoadedProducts = true
+            self.loadExploreProducts()
             self.loadModerationState()
             
             Task {

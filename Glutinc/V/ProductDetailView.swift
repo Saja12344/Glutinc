@@ -127,7 +127,7 @@ struct ProductDetailView: View {
                 .accessibilityLabel(L10n.t("Save post", ar: "حفظ المنشور"))
             }
         }
-        .sheet(isPresented: $showSignIn) { signInSheet }
+        .fullScreenCover(isPresented: $showSignIn) { signInSheet }
         .sheet(isPresented: $showReport) { reportSheet }
         .sheet(isPresented: $showCorrection) { correctionSheet }
         .confirmationDialog(
@@ -158,32 +158,21 @@ struct ProductDetailView: View {
                 ar: "سيُزال المنشور من الاستكشاف ومن ملفك."
             ))
         }
-        .onChange(of: vm.isSignedIn) { signedIn in
-            if signedIn, case .save(let id) = vm.pendingAuthAction, id == post.id {
-                vm.pendingAuthAction = nil
-                showSignIn = false
-                vm.toggleSave(productID: id)
+        .onChange(of: vm.signedUser?.id) { _, id in
+            guard id != nil, case .save(let productID) = vm.pendingAuthAction, productID == post.id else {
+                return
             }
+            vm.pendingAuthAction = nil
+            showSignIn = false
+            vm.toggleSave(productID: productID)
         }
     }
 
     private var glutenHitsToShow: [String] {
-        let wantArabic = languageStore.isArabic
-        var seen = Set<String>()
-        return post.detectedIngredients.compactMap { name -> String? in
-            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard trimmed.count >= 2 else { return nil }
-            let lower = trimmed.lowercased()
-            guard !lower.contains("nutrition")
-                && !lower.contains("حقائق")
-                && !lower.contains("servings")
-                && !lower.contains("calories") else { return nil }
-            guard let visible = IngredientLanguage.display(trimmed, arabic: wantArabic) else { return nil }
-            guard visible.count <= 80 else { return nil }
-            let key = visible.lowercased()
-            guard seen.insert(key).inserted else { return nil }
-            return visible
-        }
+        IngredientLexicon.userFacingKeywords(
+            from: post.detectedIngredients,
+            arabic: languageStore.isArabic
+        )
     }
 
     private var whyThisResult: some View {
@@ -275,7 +264,7 @@ struct ProductDetailView: View {
     private var signInSheet: some View {
         ZStack {
             AppColors.navy.ignoresSafeArea()
-            SignInPromptView().environmentObject(vm)
+            SignInPromptView(showsCloseButton: true).environmentObject(vm)
         }
         .preferredColorScheme(.dark)
     }

@@ -525,8 +525,6 @@ class CameraOCRViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDeleg
         analysis = result
         needsCaptureTips = result.status == .unreadableIngredients || result.tooSmallForOCR
         glutenFound = result.glutenHits.map { GlutenIngredient(name: $0.name) }
-            + result.ambiguousHits.map { GlutenIngredient(name: $0.name) }
-            + result.unknownHits.map { GlutenIngredient(name: $0.name) }
     }
 }
 

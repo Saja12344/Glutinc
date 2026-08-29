@@ -99,6 +99,29 @@ enum IngredientMatcher {
         return nil
     }
 
+    static func matchedRules(in text: String) -> [IngredientRule] {
+        let tokens = ScanTextNormalizer.tokens(text)
+        var i = 0
+        var matched: [IngredientRule] = []
+        var seen = Set<String>()
+        while i < tokens.count {
+            if let hit = longestMatch(tokens: tokens, start: i) {
+                let rule = IngredientLexicon.rules[hit.alias.ruleIndex]
+                if seen.insert(rule.canonicalName).inserted {
+                    matched.append(rule)
+                }
+                i += hit.alias.tokens.count
+            } else {
+                i += 1
+            }
+        }
+        return matched
+    }
+
+    static func matchedGlutenRiskRules(in text: String) -> [IngredientRule] {
+        matchedRules(in: text).filter { $0.classification == .containsGluten || IngredientLexicon.isGlutenRisk($0) }
+    }
+
     static func knownConceptCount(in text: String) -> Int {
         let tokens = ScanTextNormalizer.tokens(text)
         var i = 0

@@ -48,25 +48,26 @@ struct ResultView: View {
         }
         .background(AppColors.navy2)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .sheet(isPresented: $showSignIn) {
+        .fullScreenCover(isPresented: $showSignIn) {
             ZStack {
                 AppColors.navy.ignoresSafeArea()
                 SignInPromptView(
                     message: L10n.t(
                         "Sign in to share this scan with the community.",
                         ar: "سجّل الدخول لمشاركة هذا المسح مع المجتمع."
-                    )
+                    ),
+                    showsCloseButton: true
                 )
                 .environmentObject(vm)
             }
             .preferredColorScheme(.dark)
+            .environmentObject(vm)
         }
-        .onChange(of: vm.isSignedIn) { signedIn in
-            if signedIn, vm.pendingAuthAction == .post {
-                vm.pendingAuthAction = nil
-                showSignIn = false
-                goToPost = true
-            }
+        .onChange(of: vm.signedUser?.id) { _, id in
+            guard id != nil, vm.pendingAuthAction == .post else { return }
+            vm.pendingAuthAction = nil
+            showSignIn = false
+            goToPost = true
         }
         .background(
             NavigationLink(
@@ -208,10 +209,13 @@ struct ResultView: View {
     }
 
     private func hitsForAppLanguage(_ hits: [IngredientHit]) -> [IngredientHit] {
-        hits.compactMap { hit in
-            guard let name = IngredientLanguage.display(hit.name, arabic: languageStore.isArabic) else {
-                return nil
-            }
+        let arabic = languageStore.isArabic
+        var seen = Set<String>()
+        return hits.compactMap { hit in
+            let name = IngredientLexicon.displayName(forCanonical: hit.name, arabic: arabic)
+            guard IngredientLexicon.isSafeDisplayKeyword(name) else { return nil }
+            let key = ScanTextNormalizer.matchingKey(name)
+            guard seen.insert(key).inserted else { return nil }
             return IngredientHit(name: name, kind: hit.kind)
         }
     }
@@ -242,35 +246,14 @@ struct ResultView: View {
 
     @ViewBuilder
     private var scannedDetailsSection: some View {
-        let hasDetails = !analysis.unknownHits.isEmpty
-            || !analysis.possibleOCRHits.isEmpty
-            || analysis.scanQuality != .good
-        if hasDetails {
+        if analysis.scanQuality != .good {
             DisclosureGroup(isExpanded: $showScannedDetails) {
                 VStack(alignment: .leading, spacing: 10) {
-                    if analysis.scanQuality != .good {
-                        Text(analysis.scanQuality == .poor
-                             ? L10n.t("The scan quality is too low to confirm ingredients.", ar: "جودة المسح منخفضة جدًا لتأكيد المكونات.")
-                             : L10n.t("Part of the label may be incomplete or low confidence.", ar: "قد يكون جزء من الملصق غير مكتمل أو منخفض الثقة."))
-                            .font(.footnote)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                    if !analysis.unknownHits.isEmpty {
-                        Text(L10n.t("Text we couldn't identify", ar: "نصوص تعذر التعرّف عليها"))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppColors.textPrimary)
-                        ForEach(hitsForAppLanguage(analysis.unknownHits)) { hit in
-                            ingredientRow(hit.name, color: AppColors.textSecondary)
-                        }
-                    }
-                    if !analysis.possibleOCRHits.isEmpty {
-                        Text(L10n.t("Possible OCR issue detected", ar: "تم اكتشاف مشكلة محتملة في قراءة النص"))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppColors.textPrimary)
-                        ForEach(hitsForAppLanguage(analysis.possibleOCRHits)) { hit in
-                            ingredientRow(hit.name, color: AppColors.warning)
-                        }
-                    }
+                    Text(analysis.scanQuality == .poor
+                         ? L10n.t("The scan quality is too low to confirm ingredients.", ar: "جودة المسح منخفضة جدًا لتأكيد المكونات.")
+                         : L10n.t("Part of the label may be incomplete or low confidence.", ar: "قد يكون جزء من الملصق غير مكتمل أو منخفض الثقة."))
+                        .font(.footnote)
+                        .foregroundStyle(AppColors.textSecondary)
                 }
                 .padding(.top, 8)
             } label: {

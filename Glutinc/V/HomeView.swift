@@ -94,25 +94,26 @@ struct HomeView: View {
             .navigationTitle(L10n.t("Explore", ar: "استكشف"))
             .navigationBarTitleDisplayMode(.large)
             .onAppear { cloudVM.loadExploreProducts() }
-            .sheet(isPresented: $showSignIn) {
+            .fullScreenCover(isPresented: $showSignIn) {
                 ZStack {
                     AppColors.navy.ignoresSafeArea()
                     SignInPromptView(
                         message: L10n.t(
                             "Sign in to save posts to your profile.",
                             ar: "سجّل الدخول لحفظ المنشورات في ملفك."
-                        )
+                        ),
+                        showsCloseButton: true
                     )
                     .environmentObject(cloudVM)
                 }
                 .preferredColorScheme(.dark)
+                .environmentObject(cloudVM)
             }
-            .onChange(of: cloudVM.isSignedIn) { signedIn in
-                if signedIn, case .save(let id) = cloudVM.pendingAuthAction {
-                    cloudVM.pendingAuthAction = nil
-                    showSignIn = false
-                    cloudVM.toggleSave(productID: id)
-                }
+            .onChange(of: cloudVM.signedUser?.id) { _, id in
+                guard id != nil, case .save(let productID) = cloudVM.pendingAuthAction else { return }
+                cloudVM.pendingAuthAction = nil
+                showSignIn = false
+                cloudVM.toggleSave(productID: productID)
             }
         }
         .preferredColorScheme(.dark)

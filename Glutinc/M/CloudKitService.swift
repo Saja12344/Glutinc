@@ -2,9 +2,20 @@
 import CloudKit
 import UIKit
 
+/// Shared production backend. Community posts live in the CloudKit **public**
+/// database (`iCloud.com.sga.Glutinc`). Images are stored as `CKAsset` on each
+/// `Product` record.
+///
+/// Required CloudKit Dashboard permissions (do not allow world writes):
+/// - Product (public): authenticated create; world/authenticated read;
+///   creator (or admin) write/delete. Only published posts are written here.
+/// - ContentReport / ProductCorrection (public): authenticated create; admin read/write.
+/// - UserProfile / SavedProduct / BlockedUser (private): owner-only read/write.
+/// Query indexes: `productID` queryable; `createdAt` optional (client sorts).
 final class CloudKitService {
+    static let shared = CloudKitService()
 
-    private let container = CKContainer(identifier: "iCloud.com.sga.Glutinc")
+    private let container = CKContainer(identifier: AppConfig.cloudKitContainerID)
     
     private let publicDB: CKDatabase
     private let privateDB: CKDatabase
@@ -208,74 +219,87 @@ final class CloudKitService {
     }
 
     func fetchProducts(completion: @escaping ([ProductModel]) -> Void) {
-
-        let query = CKQuery(
-            recordType: "Product",
-            predicate: NSPredicate(value: true)
-        )
-        query.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-
         Task {
             do {
-                let (matchResults, _) = try await publicDB.records(matching: query)
-
-                let products: [ProductModel] = matchResults.compactMap { _, result in
-                    guard case let .success(record) = result else { return nil }
-
-                    // ✅ الصورة إجبارية
-                    guard
-                        let asset = record["image"] as? CKAsset,
-                        let fileURL = asset.fileURL,
-                        let image = UIImage(contentsOfFile: fileURL.path)
-                    else {
-                        print("⚠️ Product skipped (no image)")
-                        return nil
-                    }
-                    let detectedIngredients =
-                        record["detectedIngredients"] as? [String] ?? []
-
-                    return ProductModel(
-                        id: record["productID"] as? String ?? record.recordID.recordName,
-                        productName: record["productName"] as? String ?? "",
-                        username: record["username"] as? String ?? "",
-                        rating: record["rating"] as? Double ?? 0,
-                        isGlutenFree: record["isGlutenFree"] as? Bool ?? false,
-                        price: record["price"] as? String ?? "",
-                        location: record["location"] as? String ?? "",
-                        category: record["category"] as? String ?? "",
-                        detectedIngredients: detectedIngredients,
-                        notes: record["notes"] as? String,
-                        productURL: record["productURL"] as? String,
-                        image: image,
-                        ownerAppleID: record["ownerAppleID"] as? String ?? "",
-                        analysisStatusRaw: record["analysisStatus"] as? String,
-                        createdAt: record["createdAt"] as? Date ?? record.creationDate,
-                        dataSource: record["dataSource"] as? String ?? "community",
-                        manufacturerWarnings: record["manufacturerWarnings"] as? [String] ?? [],
-                        certificationStatus: record["certificationStatus"] as? String,
-                        certificationSource: record["certificationSource"] as? String,
-                        lastVerifiedAt: record["lastVerifiedAt"] as? Date,
-                        recordName: record.recordID.recordName,
-                        barcode: record["barcode"] as? String,
-                        ingredientText: record["ingredientText"] as? String,
-                        verificationStatusRaw: record["verificationStatus"] as? String,
-                        glutenAnalysisStatusRaw: record["glutenAnalysisStatus"] as? String,
-                        verifiedBy: record["verifiedBy"] as? String,
-                        ingredientCount: record["ingredientCount"] as? Int ?? 0
-                    )
+                let records = try await fetchAllPublicRecords(ofType: "Product")
+                let products = records.compactMap(mapProduct).sorted {
+                    ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)
                 }
-
                 await MainActor.run {
                     print("✅ FINAL FETCH:", products.count)
                     completion(products)
                 }
-
             } catch {
                 print("❌ CloudKit fetch error:", error)
                 await MainActor.run {
                     completion([])
                 }
             }
+        }
+    }
+
+    func deleteProduct(id: String, recordName: String?, completion: @escaping (Bool) -> Void) {
+        Task {
+            if let recordName, !recordName.isEmpty {
+                do {
+                    try await publicDB.deleteRecord(withID: CKRecord.ID(recordName: recordName))
+                    await MainActor.run { completion(true) }
+                    return
+                } catch {
+                    print("⚠️ delete by recordName failed, querying productID:", error.localizedDescription)
+                }
+            }
+            do {
+                let query = CKQuery(
+                    recordType: "Product",
+                    predicate: NSPredicate(format: "productID == %@", id)
+                )
+                let (results, _) = try await publicDB.records(matching: query, resultsLimit: 20)
+                var deleted = false
+                for (recordID, result) in results {
+                    if case .success = result {
+                        try await publicDB.deleteRecord(withID: recordID)
+                        deleted = true
+                    }
+                }
+                await MainActor.run { completion(deleted) }
+            } catch {
+                await MainActor.run { completion(false) }
+            }
+        }
+    }
+
+    private func fetchAllPublicRecords(ofType type: String) async throws -> [CKRecord] {
+        let query = CKQuery(recordType: type, predicate: NSPredicate(value: true))
+        var collected: [CKRecord] = []
+        var cursor: CKQueryOperation.Cursor?
+        let (first, next) = try await publicDB.records(
+            matching: query,
+            inZoneWith: nil,
+            desiredKeys: nil,
+            resultsLimit: CKQueryOperation.maximumResults
+        )
+        collected.append(contentsOf: successfulRecords(first))
+        cursor = next
+        while let current = cursor {
+            let (page, more) = try await publicDB.records(
+                continuingMatchFrom: current,
+                desiredKeys: nil,
+                resultsLimit: CKQueryOperation.maximumResults
+            )
+            collected.append(contentsOf: successfulRecords(page))
+            cursor = more
+            if collected.count >= 500 { break }
+        }
+        return collected
+    }
+
+    private func successfulRecords(
+        _ results: [(CKRecord.ID, Result<CKRecord, Error>)]
+    ) -> [CKRecord] {
+        results.compactMap { _, result in
+            if case let .success(record) = result { return record }
+            return nil
         }
     }
 

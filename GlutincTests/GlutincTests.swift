@@ -317,6 +317,82 @@ struct OCRQualityEvaluatorTests {
     }
 }
 
+struct CleanIngredientDisplayTests {
+    private func analyze(_ text: String) -> ScanAnalysisResult {
+        ScanAnalyzer.analyze(text: text, ocrConfidence: nil)
+    }
+
+    @Test func noisyPackagingShowsOnlyCanonicalGlutenKeywords() {
+        let result = analyze("""
+        بسكويت بالكاكاو
+        المكونات: دقيق القمح، سكر، زيت نباتي، كاكاو، ملح
+        يحتوي على
+        قد يحتوي على
+        صنع في مملكة البحرين
+        منطقة البحرين العالمية
+        14000/000047 62220 7 8022 8000 2117
+        السكريات الكلية 0 % بروتين 0 %
+        إي 282 إي 200 (471, 472)
+        """)
+        #expect(result.status == .glutenDetected)
+        #expect(result.flaggedNames == ["wheat flour"])
+        #expect(result.glutenHits.allSatisfy { !$0.name.contains(where: \.isNumber) })
+        #expect(!result.flaggedNames.contains(where: { $0.localizedCaseInsensitiveContains("bahrain") }))
+        #expect(!result.flaggedNames.contains(where: { $0.contains("البحرين") }))
+        #expect(!result.flaggedNames.contains(where: { $0.contains("يحتوي") }))
+        #expect(!result.flaggedNames.contains("سكر"))
+        #expect(!result.flaggedNames.contains("ماء"))
+    }
+
+    @Test func contextPhrasesAreNotDisplayedAsIngredients() {
+        let result = analyze("Contains wheat")
+        #expect(result.flaggedNames == ["wheat"])
+        #expect(!result.flaggedNames.contains(where: { $0.localizedCaseInsensitiveContains("contains") }))
+    }
+
+    @Test func arabicContextPhrasesAreNotDisplayedAsIngredients() {
+        let result = analyze("يحتوي على القمح")
+        #expect(result.flaggedNames == ["wheat"])
+        #expect(!result.flaggedNames.contains(where: { $0.contains("يحتوي") }))
+    }
+
+    @Test func noMatchDoesNotExposeRawOCR() {
+        let result = analyze("صنع في مملكة البحرين 14000 بروتين 0%")
+        #expect(result.flaggedNames.isEmpty)
+        #expect(result.glutenHits.isEmpty)
+    }
+
+    @Test func displayListUsesLocalizedCanonicalNames() {
+        let en = IngredientLexicon.userFacingKeywords(from: ["wheat flour", "barley"], arabic: false)
+        #expect(en == ["Wheat Flour", "Barley"])
+        let ar = IngredientLexicon.userFacingKeywords(from: ["wheat flour", "barley"], arabic: true)
+        #expect(ar == ["دقيق القمح", "شعير"])
+    }
+
+    @Test func legacyNoisyStoredIngredientsAreCleanedForDisplay() {
+        let noisy = [
+            "دقيق القمح (282, 200) صنع في مملكة البحرين يحتوي على:",
+            "شعير () .",
+            "ماء",
+            "سكر"
+        ]
+        let cleaned = IngredientLexicon.userFacingKeywords(from: noisy, arabic: true)
+        #expect(cleaned == ["دقيق القمح", "شعير"])
+        #expect(cleaned.allSatisfy { !$0.contains(where: \.isNumber) })
+    }
+
+    @Test func buckwheatAndMaltodextrinStayOutOfFlaggedNames() {
+        #expect(analyze("Buckwheat, Maltodextrin").flaggedNames.isEmpty)
+        #expect(analyze("Buckwheat, Maltodextrin").status != .glutenDetected)
+    }
+
+    @Test func duplicateMatchesCollapseToOneCanonical() {
+        let result = analyze("Wheat flour, wheat flour, دقيق القمح, wheat")
+        #expect(result.flaggedNames.contains("wheat flour"))
+        #expect(Set(result.flaggedNames).count == result.flaggedNames.count)
+    }
+}
+
 struct ProductCatalogExploreTests {
     @Test func glutenProductsAreEligibleForExplore() {
         #expect(ProductCatalog.isEligibleForExplore(
